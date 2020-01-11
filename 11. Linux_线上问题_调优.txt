@@ -1,0 +1,31 @@
+11
+
+Linux:
+	主要Linux 命令: 
+	理解网关，网关带来的好处和坏处: ??
+	查找磁盘上最大的文件的命令:
+	如何查看系统日志文件:
+
+
+
+
+内存溢出内存泄漏事故: ThreadLocal中的键值对中的键是一个弱引用，那么在内存回收的时候，这个键很可能会被回收掉，然后键没了，就无法找到value的值，造成了内存泄漏
+	定时任务: 
+
+降级熔断
+令牌桶限流: https://www.cnblogs.com/cjsblog/p/9379516.html
+
+防火墙session不够用
+消息错乱, 重新提交offset: 
+
+
+排查线上oom: 
+	quartz: 定时任务内存泄漏, 要加上waitForJobsToCompleteOnShutDown=true
+
+
+使用场景及限制: 
+
+
+限量抢券
+
+热点Key问题

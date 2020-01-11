@@ -1,0 +1,115 @@
+Spring:
+	什么是 Spring 框架？Spring 框架有哪些主要模块？
+		轻量级的Java开发框架，为应用开发提供平台
+		1. Spring AOP
+		2. Spring Core 提供bean工厂 IOC
+		3. Spring ORM
+		4. Spring Dao JDBC 
+		5. Spring Context 提供了关于UI支持,邮件支持等
+		6. Spring Web 提供了web的一些工具类的支持
+		7. Spring MVC 提供了web mvc , webviews , jsp ,pdf ,export
+	AOP: https://blog.csdn.net/qq_26323323/article/details/81012855
+		如事务管理、安全检查、缓存、对象池管理等。
+		Spring-AOP运行时增强，而AspectJ是编译时增强, SpringAOP使用了AspectJ的Annotation。定义切面, 使用Pointcut来定义切入点, 定义增强处理, 并没有使用它的编译器和织入器.
+		实现原理是JDK 动态代理，在运行时生成代理类。
+		1. 启用 Spring 对 @AspectJ 方面配置的支持: 添加配置: <aop:aspectj-autoproxy/> 
+			对应: AopNamespaceHandler, 会为aspectj-autoproxy标签注册AspectJAutoProxyBeanDefinitionParser.
+		2. AspectJAutoProxyBeanDefinitionParser: 
+			注册AnnotationAwareAspectJAutoProxyCreator(BeanPostProcessor)注册到Spring容器中，把bean交给Spring去托管
+			AnnotationAwareAspectJAutoProxyCreator就是生成对象的代理类的相关功能
+				有 postProcessBeforeInitialization, postProcessAfterInitialization(会wrapIfNecessary)
+				在wrap中, 如果该类有advice则创建proxy, 
+		3. wrapIfNecessary()方法:
+			1. getAdvicesAndAdvisorsForBean 通过class的解析拿到增强, 如果有增强, 就createProxy(bean.class, beanName, specificInterceptors)
+			2. createProxy: 
+				1. 创建proxyFactory，proxy的生产主要就是在proxyFactory做的
+				2. 将specificInterceptors重新封装为Advisor类，然后添加到ProxyFactory(ProxyCreatorSupport的实现)中
+				3. proxyFactory设置好target等, 调用proxyFactory.getProxy获取bean对应的proxy
+		4. ProxyFactory.getProxy: 创建JDK&CGlib代理的工厂哦~
+			1. 方法运行createAopProxy().getProxy(classLoader), 拿到AOP代理工厂, 拿代理.
+			2. createAopProxy()方法里面, 根据配置的Optimize, 代理的是接口/类来创建CglibAopProxy/JdkDynamicAopProxy
+				如果目标类是接口或者是代理类，则直接使用JDKproxy, 如果是类/Optimize就用CgLib
+			3. JdkDynamicAopProxy就正常的 Proxy.newProxyInstance(classLoader, proxiedInterfaces, this)
+		5. Invoke(): 
+			1. equals、hashCode等Object的方法就用
+			2. 获取当前bean被拦截方法链表
+			3. 如果为空, 则直接调用target的method, 不为空, 则逐一调用chain中的每一个拦截方法的proceed
+				invocation.proceed().
+		6. ProxyFactoryBean, 实现了FactoryBean, 与Spring IOC容器结合
+			1. getObject里面: initializeAdvisorChain(), 现根据增强器名字初始化增强器链条.
+			2. 根据单例代理还是原型代理, 做getSingletonInstance()或者newPrototypeInstance();
+			3. 最终都会 getProxy(createAopProxy());	
+	Spring的aop有哪些实现方式:
+		Spring 自动代理机制:
+			BeanNameAutoProxyCreator（基于Bean配置名规则的自动代理创建器）
+			DefaultAdvisorAutoProxyCreator（基于Advisor匹配机制的自动代理创建器):对容器中所有的Advisor进行扫描，自动将这些切面应用到匹配的Bean中（即为目标Bean创建代理实例)
+			AnnotationAwareAspectjAutoProxyCreator（基于Bean中AspectJ注解标签的自动代理创建器）
+		1. 利用代理模式动态的实现AOP: 继承advice(implements MethodBeforeAdvice)
+		2. 自定义类实现AOP: 编写aop配置文件<aop:config><aop:aspect之类的
+		3. 利用注解实现AOP: @Aspect, @Before, @after
+	IOC: https://javadoop.com/post/spring-ioc
+		控制反转是一种设计思想, 意味着将你设计好的对象交给容器控制，而不是传统的在你的对象内部直接控制。
+	DI: 依赖注入, IoC的一个重点是在系统运行中，动态的向某个对象提供它所需要的其他对象。
+		这一点是通过DI（Dependency Injection，依赖注入）来实现的。
+	自动装配的五种方式:spring引入context文件头
+		no: 缺省情况, 通过"ref"属性手动设定
+		byName: 根据属性名称自动装配
+		byType: 按数据类型自动装配。如果一个bean的数据类型是用其它bean属性的数据类型，兼容并自动装配它。
+		constructor: 在构造函数参数的byType方式
+		autodetect: 如果找到默认的构造函数, 使用“自动装配用构造”; 否则使用“按类型自动装配”.
+	springboot和spring的区别: 
+	Spring Bean 的作用域: https://blog.csdn.net/weixin_33811539/article/details/92420106
+		1. singleton: IOC容器内只有一个实例. (默认)
+		2. prototype: 每次拿取都是新的
+		3. request: 每次HTTP请求都创建新的
+		4. session, 每个session都用新的.
+		5. globalSession: 类似session, 不过要protlet应用环境.
+	Bean 生命周期: spring 容器管理singleton作用域下的bean生命周期, 在doCreate方法中-https://www.jianshu.com/p/1dec08d290c1
+		1. 实例化-instantiation-createBeanInstance()
+		2. 属性赋值-populate0-populateBean()
+		3. 初始化-initialization-initializeBean()
+		4. 销毁-destruction
+		实例化bean对象(通过构造方法或者工厂方法)
+		设置对象属性(setter等)（依赖注入）
+		如果Bean实现了BeanNameAware接口，工厂调用Bean的setBeanName()方法传递Bean的ID。（和下面的一条均属于检查Aware接口）
+		如果Bean实现了BeanFactoryAware接口，工厂调用setBeanFactory()方法传入工厂自身
+		将Bean实例传递给Bean的前置处理器的postProcessBeforeInitialization(Object bean, String beanname)方法, 自定义.
+		调用Bean的初始化方法
+		将Bean实例传递给Bean的后置处理器的postProcessAfterInitialization(Object bean, String beanname)方法, 自定义.
+		使用Bean
+		容器关闭之前，调用Bean的销毁方法
+	Bean是线程安全的吗:
+		Spring框架并没有对单例bean进行任何多线程的封装处理。
+		关于单例bean的线程安全和并发问题需要开发者自行去搞定。
+	注入javaCollection:
+		集合类的配置元素: list, set, map, props.
+	Spring中使用的设计模式:
+		代理模式，在AOP中被使用最多。
+		单例模式，在Spring配置文件中定义bean的时候默认的是单例模式。
+		工厂模式, BeanFactory用来创建对象的实例。
+		模板方法， 用来解决重复性代码。
+		前端控制器：spring用前端控制器DispatcherServlet对请求进行分发
+		观察者模式: Spring 事件驱动模型
+		装饰者模式: Spring 中用到的包装器模式在类名上含有 Wrapper或者 Decorator
+	Spring中事件:
+		1. 上下文更新时间, 上下文关闭事件
+		2. 上下文开始事件, 上下文停止事件
+		3. 请求处理事件
+	Spring 事务中的隔离级别: 5 TransactionDefinition 接口 ?????????
+		1. DEFAULT: 默认隔离界别: mysql重复读
+		2. read_uncommitted: 读未提交
+		3. READ_COMMITED: 
+		4. REPEATABLE_READ
+		5. SERLALIZABLE
+	Spring 事务中的事务传播行为: 7 
+		1. 支持当前事务:
+			1. PROPAGATION_REQUIRED: 默认, 支持当前事务, 没有事务就新建一个.
+			2. propagation_supports: 支持当前事务, 没有也不新建
+			3. propagation_mandatory: 支持当前事务, 当前必须有事务
+		2. 不支持当前事务:
+			1. PROPAGATION_REQUIRED_new: 创建一个新事务
+			2. PROPAGATION_not_support: 非事务方式运行.
+			3. PROPAGATION_never: 非事务方式运行, 当前不能有事务
+		3. propagation_nested: 当前有事务就见一个新事务, 没有事务也建一个新事物.
+	MVC工作原理: https://www.cnblogs.com/yoci/p/10642493.html
+使用场景及限制: 

@@ -1,0 +1,156 @@
+分布式缓存:
+	为什么要使用缓存?
+		1. 高性能, 从20ms/50ms的sql查询/dubbo调用->3ms的缓存查询.
+		2. 高并发, 从200ms的接口到10ms的接口响应速度.
+	缓存带来的问题:
+		1. 缓存和数据库双写不一致:???
+		2. 缓存雪崩
+		3. 缓存穿透
+	缓存和数据库数据不一致:????
+	保证缓存与数据库双写时的数据一致性: 
+		cacheAsidePattern: 更新RDS&删除redis, 查询rDS更新redis.
+		先删缓存, 然后更新数据库, 防止更新数据库后删除缓存失败后不一致.
+		高并发修改库存问题: 丢失数量.
+			把对key的读写路由到内存队列中, 通过后台线程更新内存队列, 然后返回数据. 并行化.
+	雪崩如何解决: 缓存挂了, 所有请求落在mysql, 导致mysql宕机.
+		事前: redisCluster.
+		事中: ehcache + hystrix限流组件.
+		事后: redis持久化机制, 恢复缓存数据.
+	缓存穿透如何解决: 
+		缓存空值. 限制返回false
+		布隆过滤器: ???https://github.com/Snailclimb/JavaGuide/blob/master/docs/dataStructures-algorithms/data-structure/bloom-filter.md
+	设计分布式缓存:??
+Radis:
+	当前项目的redis架构: ?
+		redis版本: 3.07:497实例, 3.2:76实例
+		redis cluster: 开发: 3主3从, 生产:10主10从
+		redis sentinel: 三主三从.
+			maxTotal: 100(同一时刻可分配最大连接数,默认值 8)
+			maxIdle: 10(最大空闲连接)
+			minIdle: 0(最小空闲连接数)
+			testOnBorrow: true
+	redis 和 memcached 的区别: 
+		1.redis支持更多更丰富的数据操作.
+		2.memcached不支持原生的集群模式, redis支持集群.
+	redis为什么是线程安全的: 
+		1. IO多路复用中有三种方式：select,poll,epoll, redis使用了线程安全的epoll, 读、写、关闭、连接都转化成了事件.
+		2. redis命令是一个一个执行，所以单个命令是线程安全的
+	redis线程模型? 单线程高并发? ?
+		1. redis基于reactor模式开发了单线程的文件事件处理器, 所以叫单线程模式, 采用IO多路复用监听多个socket, 根据socket上的事件压入队列, 
+		另有文件事件分发器选择事件处理器处理.
+		2. 高并发: 单机单线程 10W
+			非阻塞的IO多路复用, 不负责处理事件, 只是把监听到的事件压入队列中.
+			纯内存的的操作.
+			单线程避免了多线程的上下文切换问题
+	redis 常见数据结构, 实现以及使用场景分析: ??? 
+		数据结构:
+			string: 构建了SDS的抽象类型. 记录了字符串长度, 内存预分配, 不会缓冲区溢出. 兼容C字符串.
+			list: 有序列表. list+listNode, 双向链表. 缓存粉丝list.
+			hash: k-v的map, 缓存信息. 
+			-字典: 维护两个哈希表, 用于rehash, 可用渐进式rehash, 字典同时持有两个hash, 增删改都做一遍.
+			-跳跃表: 双向链表, 每个节点维持多个层存指向其他节点的指针.
+			整数集合: struct只包含整数, 个数, 编码(类型). 
+			压缩列表: 列表键和hash的底层实现之一. 特殊编码的连续内存组成的顺序性数据结构.存储任意多个节点.
+		对象: 键对象, 值对象, 编码.
+			键对象: 字符串对象, 值对象可以是任意一种.
+			字符串: 值对象的编码是: int, raw, embstr.
+			list: 值对象编码是zipList跳跃表, linkedList链表.
+			hash: hashTable/zipList
+			set: 无序集合, intset和hashtable(存在key,value为null), 去重.
+			sorted-set: 字典和跳跃表, 放进元素时指定分数, 有序集合
+		内存回收: redis对象系统中构建了引用计数(reference counting)技术实现的内存回收机制.
+			redisObject钟有refCount属性. 还可以显示对象是否在共享中.
+	redis数据库:
+		redisServer: 维系所有的数据库
+			1. 命令执行过程: 事件处理器读取命令请求, 查找命令实现. 进行准备操作(权限/等), 调用命令实现函数
+			执行后续的工作(AOF等). 返回给客户端.
+			2. serverCron函数: 每100ms执行一次
+				更新服务器时间缓存更新lru时钟, 管理客户资源, 执行AOF.
+		redisClient: redisDb属性存着当前用的数据库.
+			输入/出缓冲区. 载入AOF文件时, 创建执行AOF的伪客户端.
+		redisDb: dic属性存着所有键值对. 
+	redis 过期: redisDB结构的expires字段保存了所有键的过期时间.
+	redis 内存淘汰机制: 如果过期key没有被定期删除删除掉, 就要用过期淘汰机制.
+		定期删除: Redis周期性执行serverCron函数时候, 会随机检查一部分key.
+		惰性删除: 每次读写命令时候, 懒惰的检查一下
+		过期淘汰机制: 内存占用过多, 会进行内存淘汰.
+			1. noeviction模式:内存不足以写入新数据, 新写入操作会报错.
+			2. allkeys-lru: 内存不足,移除最近最少使用的key(常用
+			3. allkeys-random: 随即删除
+			4. volatile-lru:内存不足, 在有过期时间的key中,移除最近最少使用的key.
+			5. volatile-random:内存不足,在设置过期时间的key中随即删除.
+			6. volatile-ttl: 内存不足, 在设置过期时间的key中优先移除最快过期key.
+	redis 持久化机制: 
+		AOF(appendOnlyFile): 每条写入命令作为日志
+			追加-文件写入-文件同步: 每执行写命令就放到啊缓冲区, 时间loop会读出缓冲区
+			AOF可以更好的保护数据不丢失，一般AOF会每隔1秒
+			AOF-rewrite: 基于redis当前内存中的数据构造一个小AOF
+			但: 文件大,恢复慢. 不适合冷备份.
+		AOP重写, 会检查过期key. 子线程执行.
+			重写期间的写命令放在AOF缓冲区和AOF重写缓冲区. 
+		RDB(RedisDataBase): 周期性的完整快照, 但会丢周期内的数据: BGSAVE不阻塞.
+			每次备份都会生成一个数据文件, 适合冷备份.
+			子进程备份, 定时, 而且写redis内存, 对redis影响小.
+			直接基于RDB数据文件来重启和恢复redis进程，更加快速
+		用RDB来做不同程度的冷备，在AOF文件都丢失或损坏不可用的时候，还可以使用RDB来进行快速的数据恢复
+	redis事件:
+		文件事件: IO多路复用的单线程的文件事件处理器, 监听套接字, 产生文件事件.
+			连接请求, 命令请求, 命令回复等.
+		时间事件: 组成部分有: id(全局唯一Id), when(毫秒精度时间戳), timeProc(时间事件处理器, 处理事件的)
+			所有的时间事件都放在time_events无序链表, 新插入的在表头, 所以ID倒序.
+			时间事件例子: serverCron函数
+			死循环调度.
+	手写LRU: ?
+		LinkedHashMap
+	redis 支持高并发:
+		redis不支撑高并发的瓶颈: 单机
+		redis要支持超10W并发:
+			主从复制, 读写分离: 增加qps查询.
+					redis replication 主从复制: master主动异步发送数据到slave.
+					master节点要做持久化机制.RDB,AOP
+					slave节点启动会ping主节点, 进行fullresynchronization,
+					slave重启会进行从上次的offset开始复制.
+		高可用: redis主从+哨兵.
+	redis复制:
+		1. 完整同步(sync): 将从服务器的数据库状态更新到主服务器当前的数据库状态属性
+			从服务器向主服务器发出*SYNC*命令, master执行BGSAVE备份, 完成后讲RDB发送给slave.
+			把备份期间的写命令从缓冲区里面给slave.
+		2. 命令传播: 主服务器上的数据库状态修改后, 从服务器保持一致
+			master把自己的写命令发给slave
+		3. 2.8之后有PSYNC命令: master只把断开区间的写命令发送给slave.
+			使用偏移量和slave的runID实现.
+		心跳检测: slave每秒会向master发送ACK, 
+	redis哨兵集群: 为什么至少3个哨兵? 适合单机数据, 
+		两个哨兵的majority=2, 那么有一个哨兵挂掉了就无法投票切换master了.
+		哨兵集群只保证高可用,不能保证不丢数据:
+			masterNode挂掉. 异步把新数据同步到slave之前挂掉, 就会丢.
+			脑裂, 也会丢失
+		解决异步复制和脑裂导致的数据丢失:
+			配置: min-slaves-to-write=1,min-slaves-max-lag=10, 要求master有至少1个slave，数据复制和同步的延迟不能超过10秒
+			最多就丢失10秒的数据
+		工作原理:
+			服务器初始化sentinelState结构, 存储sentinel功能. 
+			sentinel每10秒向被监视的master发送INFO命令获取master的信息.
+			sentinel发现新的slave时, 会订阅slave并连接slave. 也每10s向slave发送INFO命令.
+			sentinel每2s向所有node的频道里发送当前ms的信息.
+	redisCluster: 读写都放在主节点. 可承载海量数据
+		集群模式的工作原理: 支持n个master, 每个master挂载多个slave. 多master+读写分离+高可用.
+			数据分片, 每个master上放一部分数据, 内置高可用.
+		集群的key如何寻址: 决定多节点时,数据如何分布到不同的master上.
+			hash算法->一致性hash算法(memcached)->hashSlot算法(redisCluster)
+			hash算法: 取模.分布到n个master里. 一旦一个master失效, 除数就变了, 所有数据失效.
+			一致性hash算法: 圆环概念, 顺时针到下一个master, 一旦一个master失效, 那么只失效掉该master的数据
+			一致性hash算法+虚拟节点: 在环上有多个虚拟节点, 分散热点key.
+			hashSlot算法: redisCluster有固定的16384个hashSlot, 每个master持有部分slot,对key计算CRC16值, 对16384取余, 分散到对应的master上.
+		节点间通讯: 16379槽(slot) 槽分配后集群进入上线状态. 16379是因为取模更平均.
+			节点间采取gossip协议进行通信, 所有节点都有集群元数据, 互相之间不断通信.
+		与哨兵相比, 功能更强大, 继承了replication+sentinal功能
+		实现: 在redisServer钟维系了clusterNode自己信息(记录slots), clusterLinke 连接节点和 clusterState集群状态.
+			每次客户端向节点发命令, 先判断是否属于自己的槽, 不是就返回MOVED错误.
+	redis 事务: MULTI, EXEC之间的命令放入队列缓存, 事务中任何命令执行失败, 其他命令依然执行.
+	如何解决 Redis 的并发竞争 Key 问题:  
+		分布式锁, 同一时间只有一个系统在操作redis-key. 加入时间戳防止乱序更新.
+
+
+
+使用场景及限制: 

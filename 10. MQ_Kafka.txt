@@ -1,0 +1,110 @@
+MQ:
+	项目中为什么用MQ? w:消峰. 
+		使用场景:	解耦: 典型的pub/sub订阅消费消息. 比如我的短信代扣里面的异步通知, 拿到消息发送结果.
+				异步: 优化接口性能, 从500MS-50ms, 比如领券接口.还会异步转同步为了响应.
+				消峰: 防止系统被打死, 防止MySQL挂掉. 比如抢券接口. 批量返利.
+	MQ可以对外使用吗?
+	使用消息队列带来的一些问题: 
+		可用性降低: 系统解耦出现热点, MQ挂掉就会down掉相关联的业务.
+		系统复杂性增加: 发送者要考虑消息重复发送问题, 消费者考虑幂等性等问题. 
+		一致性问题: 多个消费者有失败的, 但返回成功, 要考虑数据一致性问题.
+	K,R,R,A 分别是什么? 常见的消息队列对比: 选型: 
+		Kafka: 单机10万, 分布式高可用, 简单功能. 适合大数据+简单扩展. 
+		RocketMQ: 单机10万处理量, 分布式扩展方便, 支持复杂业务场景, Java开发. 
+		RabbitMQ: 万级处理量, 延迟低, 主从高可用, 功能完备管理界面好. [erlang开发,没法接触源码] 中小公司.
+		ActiveMQ: 万级(小规模)处理量, 社区不活跃了.
+	引入消息队列之后如何保证高可用性: 
+		我们用的是KafkaMQ, 
+		Kafka高可用的实现: 纯分布式架构, HA(副本)机制
+			数据分机器存储, 而且每部分数据还会有主从.
+		RabbitMQ高可用的实现: 
+			单机模式: 练习的机器.
+			普通集群模式:ABC三台机器, 消费者请求B,B没有消息,B会从A拿一条消息给消费者.
+					集群内大量数据传输, Queue所在节点down后没有做到高可用
+			镜像集群模式: 真正高可用, 生产者的消息会被同步到所有节点.每个节点都有queue完整镜像(全部数据)
+					任何节点down掉.消费者可以去其他节点消费数据. 但是不是分布式(超大queue,单节点无法容纳)
+	如何保证消息不被重复消费呢(幂等性): 要考虑生产的系统设计问题
+		按照消息被生产的先后, 被分配offset, 按照顺序消费.消费者从Kafka消费数据时,提交offset到ZK. (但是是定时定期提交offset)
+		每次Kafka重启后, 消费者请求指定offset数据.所以可能有重复
+		插入前查询/RDS唯一键, redis消费锁, redis消费记录.
+	如何保证消息的可靠性传输（如何处理消息丢失的问题）？
+		Kafka消息丢失:
+			消费端者丢失消息: 关闭自动提交offset, 手动提交.
+			Kafka丢失消息: 在leader同步消息给follower前一刻down掉, 重新选举的leader丢失了原leader的消息 
+					1.把topic的replication.factor>1, 每个partition至少有2个副本.
+					2.Kafka服务器的min.insync.replicas>1,leader至少有1个follower没掉队(慢)
+					3.producer端设置acks=all,消息必须写入所有的replication之后才算是写入成功
+					4.producer端设置retries=max, 无限次重试.
+			生产者丢失数据: producer端设置acks=all.retries=max.
+		RabbitMQ消息丢失:
+			生产者丢失消息: 可以重发, rabbitMQ可以开启rabbitMQ事务(异常重发)但会影响性能.
+					channel设置成confirm模式, 发送消息后rabbitMQ收到后会回调接口.
+			RabbitMQ丢失消息: rabbitMQ可以持久化到磁盘中,发送消息的deliveryMode=2同时创建时设置queue的持久化 
+					这样在消息持久化后, 才会ACK通知生产者.
+			消费者丢失消息: 关闭autoAck, 处理完后手动ACK
+	怎么保证从消息队列里拿到的数据按顺序执行？
+		RabbitMQ: 同一个queue里面的三个消息,分别被三个消费者消费.
+				每个消费者开一个queue, 发送到1个queue里面就顺序了.
+		Kafka: 写入一个partition中的消息是有顺序的, 所以要保证分发到一个partition中
+			写数据时候, 指定同一个key, 在分发消息时候会被分发到同一个partition中.
+			同时每个partition, 只指定一个消费者.
+			同一个消费者多线程, 可为多线程指定多个内存queue.
+	如何解决消息队列的延时以及过期失效问题？
+		线上不允许设置失效时间, 过后可以跑批处理丢失订单.
+	消息队列满了以后该怎么处理？有几百万消息持续积压几小时，说说怎么解决？
+		可以把消费者变成生产者, 部署更多的消费者, 加倍干活.
+	在consumer group 中新增一个consumer  会提高消费消息的速度吗、那如果我想提高消息消费的速度，我要怎么办:
+RabbitMQ:
+	如果让你来开发一个消息队列中间件，你会怎么设计架构？
+	我们公司的MQ架构???:
+
+
+Kafka: 
+	KakfaBrokerLeader的选举: 所有的Kafka Broker节点一起去Zookeeper上注册一个临时节点, 
+		只有一个KafkaBroker注册成功成为 KafkaBrokerController;
+		Controller在ZooKeeper注册Watch监听其他的Kafka Broker.
+	Broker宕机恢复:	Kafka动态维护了一个同步状态的副本的集合(a set of in-sync replicas), 简称ISR
+		controller通知zookeeper, 由zookeeper就通知其他的kafkaBroker.
+		controller会读取该宕机broker上所有的partition在zookeeper上的状态
+		并选取ISR列表中的一个replica作为partition leader(ISR列表是根据数据的完整程度设置的备份机子的队列，如果ISR列表中的replica全挂，选一个幸存的replica作为leader
+		
+	Consumergroup: 介绍了消费的几种模式:
+		多个consumer(consumer 线程)可以组成一个组(Consumer group), partition中的每个message只能被组内的一个consumer消费
+		多个consumer的消费都必须是顺序读取partition里面的message, 新启动的consumer默认从头开始读
+		可以加partition的数量来横向扩展，那么再加新的consumerthread去消费
+		无论是如何消费，一个组必须且一定会消费完全部的partition
+		一个组必须且一定会消费完全部的partition-最优的设计:consumer group下的consumer thread的数量等于partition数量
+	Consumer Rebalance的触发条件: Consumer/Broker 的变动会造成 ConsumerRebalance
+		Consumer的delivery gurarantee，默认是读完message先commmit再处理message, 可以把autocommit设为false.
+		1. low level api的partition offsite信息是consumer自己维护, high level api是zookeeper.
+			kakfa处理message是没有锁操作的, 使用low中间重启会重复丢失消息/自己处理逻辑, 使用hight会重复消费.
+		2. consumer负责维护消息的消费记录,而broker则不关心
+	Topic & Partition: 
+		1. Topic相当于传统消息系统MQ中的一个队列queue
+		2. kafka会把Topic的message进行load balance, 均匀的分布在topic下的不同的partition.
+		3. 新增partition时, 原来的partition里面的message不会重新进行分配, 重新开始均匀分配新的消息.
+		4. Partition Replica: partition可以在其他的kafka broker节点上存副本, 用于故障恢复.
+		5. 第i个Partition分配到第（i%n）个Broker上。它的第j个Replica分配到第((i+j)% n)个Broker上
+		6. partition的Follower对于leader就像一个"consumer
+	消息发送: 
+		1. producer先把message发送到partition leader，再由leader发送给其他partition follower
+		2. 在向Producer发送ACK前需要保证有多少个Replica已经收到该消息：根据ack配的个数而定, 可以配1, 就能不丢数据
+	消息投递可靠性- 
+		ack的三个等级
+			1. 不管，发送出去就当作成功，不能保证消息成功投递到broker
+			2. Master-Slave模型，只有当Master和所有Slave都接收到消息时，才算投递成功
+			3. 只要Master确认收到消息就算投递成功(一般使用)
+		持久化: Kafka是顺序写入o（1）的时间复杂度，速度非常快
+		有效期: Kafka会长久保留其中的消息, 使用文件存储消息(append only log).暂时buffer起来再flush到磁盘
+		批量发送: 
+		同步异步：Producer采用异步push方式，极大提高Kafka系统的吞吐率
+			replication策略是基于partition,
+		delivery guarantee:
+			1. At most once消息可能会丢，绝对不会重复传输: 先保存offset再处理消息;
+			2. At least once 消息绝对不会丢，但是可能会重复传输: 先处理消息, 再保存offset.
+			3. Exactly once每条信息肯定会被传输一次且仅传输一次: 最少1次＋消费者的输出中额外增加已处理消息最大编号
+	文件存储机制
+
+
+
+使用场景及限制: 

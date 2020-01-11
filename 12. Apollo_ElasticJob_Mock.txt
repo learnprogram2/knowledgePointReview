@@ -1,0 +1,39 @@
+Apollo: 统一管理不同环境、不同集群的配置
+	1. 客户端能实时（1秒）接收到最新的配置，并通知到应用程序
+	2. 支持不同环境（开发、测试、生产）、不同集群
+		完善的管理系统，权限管理、发布审核、操作审计
+		SpringBoot集成友好 ，较小的迁移成本
+		配置修改实时生效（热发布）
+		版本发布管理
+	架构: 
+		1. ConfgService: 提供配置获取接口, 配置更新推送接口(长轮询) , 接口服务对象为Apollo客户端
+		2. AdminService: 提供配置管理, 修改、发布接口
+		3. Client: 客户端程序，为应用提供配置获取、实时更新等功能, Client侧做load balance、错误重试
+			通过Meta Server获取Config Service服务列表（IP+Port），通过IP+Port访问服务
+		4. Portal: 提供Web管理界面 是Apollo的四个核心微服务模块, 相互协作完成配置中心业务功能
+		5. MetaServer: Eureka的Proxy, 从Eureka获取AdminService和ConfigService, 
+			为protal提供AdminService列表, 为Client提供ConfigService列表
+		6. Eureka: 基于Eureka做服务注册与发现, configAdminService都向Eureka注册服务保持心跳, 
+		2. Eureka/MetaServer/NginxLB是辅助微服务之间进行服务发现的模块。
+	发布过程: 
+		1. 用户在Portal操作配置发布
+		2. Portal调用Admin Service的接口操作发布
+		3. Admin Service发布配置后，发送ReleaseMessage给各个Config Service
+		4. Config Service收到ReleaseMessage后，通知对应的客户端
+	发送ReleaseMessage的实现方式: 
+		通过一个简单的数据库消息队列
+		1. Admin Service在配置发布后会往ReleaseMessage表插入一条消息记录, AppId+Cluster+Namespace
+		2. Config Service有一个线程会每秒扫描一次ReleaseMessage表
+		3. Config Service通知到所有的消息监听器
+		4. 消息监听器通知client
+	Config Service通知客户端的实现方式:
+		1. 客户端会发起一个Http请求到Config Service
+		2. 不会立即返回结果, 通过 Spring DeferredResult把请求挂起
+		3. 60秒内没有该客户端关心的配置发布，那么会返回Http状态码304给客户端
+		4. 如果有该客户端关心的配置发布, 该请求会立即返回
+		
+maven 插件之 AutoConfig 转 Apollo
+
+elastic-job:
+UnitTest-Mock:
+使用场景及限制: 

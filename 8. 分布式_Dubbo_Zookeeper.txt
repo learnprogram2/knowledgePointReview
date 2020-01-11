@@ -1,0 +1,134 @@
+分布式: 
+	为什么要进行系统拆分, 如何拆分的: 
+		如何理解微服务，服务如何划分: ????
+		拆分原因: 多人维护同一块代码, 代码冲突, 需要大量测试.
+		服务拆分: 系统拆多服务, 要拆很多轮. 先拆出schedule, 再拆出promotion. 再拆
+			多轮拆. 一个主负责人负责一个服务.
+		为什么用dubbo: dubbo只是一个RPC架构, 还有springcloud.
+		为什么不用springCloud: ??????
+	分布式服务框架: 
+	分布式服务接口请求顺序性:
+		1. hash分发, 把要保证数据的请求分发到同一个provider/队列/线程中.
+		2. 分布式事务锁. 拿锁判断, 释放锁. 保证强顺序. 
+	分布式服务接口幂等性设计: 不能重复返利:
+		不是技术问题, 是经验问题.
+		1. 每个请求设置唯一ID. 设置同步锁
+		2. 每次请求记录请求标识. mysql记录流水/redis记录领取记录.
+		3. 每次请求处理前判断是否已处理.
+	分布式会话(session): 分布式session:
+		1. tomcat + redis: tomcat的配置文件中配置redisSessionHandler和RedisSessionManager.
+			但是严重依赖于tomcat, 重耦合.
+		2. springSession + Redis: 通过filter过滤, 设置redis为session.
+	分布式事务: 
+		BASE:
+		CAP: 一致性(Consistency), 可用性(Availability), 区容错性(Partition tolerance)
+		XA: 
+	分布式事务中间件: 
+	分布式事务方案: 必问
+		1. 两阶段提交方案: 先询问, 再执行. 常用于多数据库存放数据. 但是一个服务多数据库不合规.
+		2. TCC方案(try,confirm,cancel): 支付&发放奖励方案. 正确性. 批量返利.
+			try: 这个阶段说的是对各个服务的资源做检测以及对资源进行锁定或者预留
+			Confirm：手动在各个服务中执行实际的操作. 如果出错就cancel.
+			Cancel：如果任何一个服务的业务方法执行出错，那么这里就需要进行补偿，就是执行已经执行成功的业务逻辑的回滚操作
+		3. 本地消息表: 任务制监听Kafka完成任务.
+			A与B系统之间通过各自备份消息表+MQ通信, 外加zk等进行成功确认. 完成事务.加上重试
+		4. 可靠消息最终一致性: (最靠谱)
+		5. 最大努力通知方案: 
+			启动事务的服务A, 发送MQ, 最大努力服务开始接收消息, 努力调用B, 多次重试.
+		6. 不做分布式事务~~
+			多监控, 记录完整日志, 事后快速定位, 修复数据.
+
+	RPC原理: http://www.importnew.com/22003.html
+	RPC请求流程.
+	RPC框架设计: 
+		（1）服务的注册中心, 可以用zookeeper来做
+		（2）消费者需要去注册中心拿对应的服务信息吧
+		（3）基于动态代理发起一次请求了
+		（4）负载均衡算法查找消费者
+		（5）数据用netty了，用hessian协议序列化后用nio方式发送？
+		（6）服务器需要针对生产者生成一个动态代理，监听网络端口了
+		降级,超时.
+	分布式锁: https://www.jianshu.com/p/8bddd381de06
+		分布式锁是什么: ??
+		redis: 
+			拿锁: set nx, 拿锁失败后不断地尝试拿锁.
+			解锁: lua脚本解自己的锁.
+			redlock算法: 获取当前时间戳, 为所有的master上锁, 如果超过一半就上锁成功, 否则失败, 失败后依次为每一个master解锁.
+		zookeeper: 
+			拿锁: 注册临时节点, 拿锁失败后就注册监听器.
+				也可以用临时顺序节点, 解锁时候把下一个叫醒.
+			解锁: 删除临时节点.
+	service还没执行完，分布式锁在redis中已经过期:??
+	如何设计高并发系统: 
+		高并发系统的架构组成: ????
+	项目中系统监控怎么做的: ????
+	第三方登录: 
+		1. 校验appID
+		2. 校验userProduct
+		3. 回调yes
+		4. 带回用户可查看数据	
+		
+Dubbo:
+	Dubbo工作原理: 
+		分为十层架构:
+			1. service层, provider和consumer 工作内容
+			2. config层, 提供自定配置
+			3. proxy层, 代理层, 所有的consumerprovider都会生成代理, 代理之间进行网络通信.
+			4. registry层, provider注册自己服务, consumer寻找可用服务.
+			5. cluster层, 多个provider的集群
+			6. monitor层, 统计信息监控.
+			7. protocol层, 网络通信层.
+			8. exchange层, 信息交换.
+			9. transport层,
+			10. serialize层, 序列化.
+		工作原理:
+			1）第一步，provider向注册中心去注册
+			2）第二步，consumer从注册中心订阅服务，注册中心会通知consumer注册好的服务
+				消费者会将提供者的地址等信息拉取到本地缓存
+			3）第三步，consumer调用provider
+			4）第四步，consumer和provider都异步的通知监控中心
+	通讯协议: ?
+		1.dubbo协议: dubbo://192.168.0.2:20188?fsdjfsd
+			单一长连接, NIO异步通信(高并发), hessian序列化协议, 
+			高并发, 但是传输数据量小, consumer远远大于provider
+		2.rmi协议:
+		3.hession协议:
+		4.http协议： json序列化
+		5.webservice协议： soap文本序列化。
+	序列化协议, hessian数据结构, PB?
+	Dubbo 的负载均衡策略: 
+		random loadbalance: 默认的随机, 根据权重随机配比.
+		roundrobin loadbalance: 轮询. 也可以调整权重
+		leastactive loadbalance: 某个机器性能越差，那么接收的请求越少
+		consistanthash loadbalance: 一致性hash, 相同参数的请求一定分发到一个provider上去
+	Dubbo 集群容错策略: 
+		failover cluster模式: 默认, 失败自动切换，自动重试其他机器
+		failfast cluster模式: 一次调用失败就立即失败，常见于写操作
+		failsafe cluster模式: 出现异常时忽略掉，常用于不重要的接口调用，比如记录日志
+		failbackc cluster模式: 失败了后台自动记录请求，然后定时重发，比较适合于写消息队列这种
+		forking cluster: 并行调用多个provider，只要一个成功就立即返回
+		broadcacst cluster: 逐个调用所有的provider
+	Dubbo 动态代理策略: 
+	服务注册, 消费者发现:
+	SPI思想: 例子:JDBC接口
+		ExtensionLoader.getExtension.
+		@SPI + @Adapter
+	如何进行服务治理, 降级, 失败重试和超时重试: ???
+		服务治理:
+		服务降级:
+		失败重试:
+		超时重试:
+	zookeeper宕机与dubbo直连的情况: 
+
+
+ZooKeeper:
+	zk使用场景: 
+		分布式系统之间的协调: 通过监听node感知其他的服务.
+		分布式锁: 使用创建node, 和监听事件, 来实现锁.
+		元数据/配置管理: node里面可以写入元数据.
+		HA高可用性场景: 使用临时节点实现监听服务健康状态. 实现主备切换.
+	zk选举: ????
+
+使用场景及限制: 
+
+为什么要用dubbo- 全用Kafka可以吗

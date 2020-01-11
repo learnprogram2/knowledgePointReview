@@ -1,0 +1,84 @@
+JUC:
+	java并发中的三个特性 原子性、可见性、有序性: 
+	Striped64:并发计数组件: https://www.jianshu.com/p/30d328e9353b
+	ConcurrentHashMap: https://www.jianshu.com/p/cf5e024d9432
+		get: ?
+		set: ?
+		ConcurrentHashMap: get.set
+	并发编程知识: https://segmentfault.com/blog/ressmix_multithread
+	TransferQueue: 生产者可以马上知道是否被消费的队列. https://www.cnblogs.com/lighten/p/7505355.html
+	SynchronousQueue: 不存储元素的阻塞队列，会直接将任务交给消费者，必须等队列中的添加元素被消费后才能继续添加新的元素 
+		https://blog.csdn.net/weixin_37195606/article/details/83933758
+	Callable与Runnable: https://blog.csdn.net/alex_hh/article/details/90481667
+	线程
+		线程状态: https://blog.csdn.net/woshiyigeliangliang/article/details/81116872
+			https://blog.csdn.net/weixin_33708432/article/details/92139324 精
+			1.new: 新建状态, 线程还未开始.
+			2.runnable: 可运行状态, 正在运行/等待系统资源.
+			3.blocked: 阻塞状态, 等待监视器锁(synchronized), 在object.wait然后notify()之后也会进入. synchronized的同步队列
+			4.waiting: 等待状态, 在objec.wait之后进入, thread.join()无超时的方法进入, lockSupport.park无超时方法进入. lock的等待队列.
+			5.timed_waiting: 超时等待. thread.sleep(), Object.wait(timeout), thread.join(timeout), lockSupport.parkNanos(nanos), locksupport.parkUntil(deadline).  等待队列
+			6.terminated: 终止状态.
+		状态切换:
+			Thread.sleep(): timed_waiting, 阻塞当前线程的执行, 不释放锁资源, 自己醒过来
+			Object.wait(): waiting, synchronized块中执行, 释放占有的锁
+			Condition.await(): waiting, 底层是调用LockSupport.park()
+			LockSupport.park(): waiting, 阻塞当前线程的执行, 不释放锁资源, 调用的Unsafe
+		线程创建:
+			1. 继承thread,重写run
+			2. 实现runnable, 实现run
+			3. 匿名内部类, thread,runnable.
+			4. 实现callable
+			5. 线程池
+			6. 并行流, list.parallelStream().
+			7. Spring异步方法
+	线程池:
+		Java 提供了哪几种线程池?他们各自的使用场景是什么?:
+			ThreadPoolExecutor: 普通线程池类.
+				1. 普通任务: execute(Runnable): 工作线程小于核心线程就创建核心线程执行,
+					达到核心数量, 就放入任务队列, 任务队列满了就创建非核心线程, 创建不了就拒绝策略.
+				2. 未来任务: FutureTask有状态state控制运行,NEW->COMPLETING->NORMAL/EXCEPTIONAL.
+					FutureTask保存了运行任务的线程runner, 调用者调用get后被保存在waiters队列中.
+					任务执行完毕，修改状态state变化，唤醒调用者线程。
+					把普通任务包装成FutureTask来实现, 使用了模板方法.
+			ScheduledThreadPoolExecutor: 定时任务线程池类. 使用延迟队列(DelayedWorkQueue)
+				(DelayQueue中使用的是优先级队列，而优先级队列使用的堆；DelayedWorkQueue直接使用的堆)
+			ForkJoinPool: 7新增的, 工作窃取理论实现大任务拆小任务.
+		线程池的创建方式?
+			1. ThreadPoolExecutor手动创建: 
+				7个参数: corePoolSize核心线程数, 
+					maximumPoolSize最大线程数, 
+					keepAliveTime线程空闲关闭的时间, unit时间单位, 
+					workQueue阻塞的任务队列, threadFactory线程工厂, 
+					handler拒绝策略. 
+		拒绝策略有哪些:
+			丢弃当前任务:
+			丢弃最老任务:
+			抛出异常: 默认
+			调用者自己处理:
+		线程池状态: 和线程数量共同保存在ctl里, 位运算.
+			RUNNING: 可接受新任务, 可执行队列中的任务.
+			SHUTDOWN: 不接受新任务, 可执行队列中的任务. 执行shutdown()方法
+			STOP: 不接受新任务, 不执行队列中的任务, 正在中断执行中的任务. 执行shutdownNow()方法.
+			TIDYING: 所有任务已经终止, 线程数量为0. 正在执行terminated()方法
+			TERMINATED: 终止状态. terminated()执行完毕.
+		自定义线程池:
+			1. 定义核心线程数, 最大线程数. 为了控制线程数量.
+			2. 任务队列, 最好是blockingQueue, 阻塞队列. 
+			3. 指定拒绝策略
+			如何支持带返回值的任务呢: 提交任务的时候不需要阻塞，get返回值的时候才可能需要阻塞
+				线程池实现FutureExecutor接口, 接收callable的任务, 并提供get的方法(可能阻塞)
+			任务执行的过程中抛出异常: 设置成一种状态返回给主线程.
+		为什么要用线程池?: 
+		使用时注意什么?
+		核心线程数和最大线程数设置成多少?https://mp.weixin.qq.com/s/tV48ZCwZUAUO-1xL7uESUA
+			1. IO密集: 最佳线程数目=（（线程等待时间+线程 CPU 时间）/线程 CPU 时间 ）* CPU 数目。
+			2. cpu密集: 尽量少, cpu数+1
+		工作队列:
+			ArrayBlockingQueue: 有界阻塞队列
+			LinkedBlockingQueue: 链表的无界阻塞队列
+			PriorityBlockingQueue: 有优先级的无阻塞队列
+			SynchronousQueue: 不存储元素的阻塞队列.
+	AQS: http://www.cnblogs.com/waterystone/p/4920797.html
+	countDownLatch: 
+	Semaphore: park()/unpark()

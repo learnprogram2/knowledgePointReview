@@ -1,0 +1,30 @@
+JDK:
+	Java异常类: 
+		1. 所有的异常都是从Throwable继承而来的，Throwable有两个子类，Error和Exception
+		2. Error是错误，对于所有的编译时期的错误以及系统错误都是通过Error抛出的。
+		3. Exception，是另外一个非常重要的异常子类。它规定的异常是程序本身可以处理的异常。
+	Object类有哪些方法?: 
+		1. hash&equals
+			为什么重写equals时必须重写hashCode方法: 变成约定: 对象根据equals方式比较, 两个相同对象hashCode必须相同.
+		2. wait(), notify()
+		3. clone(), finalize()
+		4. toString()
+	设计模式:
+		手写几种单例模式: 
+			静态内部类方式: 初始化阶段, jvm会获取一个初始化的锁. 内部类有一个static的外部类实例. return InnerClass.staticInnerClassSingleton;
+			双重检查懒汉法: synchronized + volatile, 双重检查, volatile防止指令重排列.
+		项目中是如何使用设计模式: 
+			责任链模式: filter.
+			状态模式: 订单的状态设定.
+			代理模式: 
+			适配器模式: adapter
+			模板模式: manager定义接口, imp具体.
+		抽象工厂和工厂方法模式的区别: 
+			工厂模式: 工厂类, 对实现某一接口的多个实现者进行创建. 
+			抽象工厂模式: 创建工厂的接口, 不指定具体类. 工厂的工厂.
+		命令模式和观察者模式: 
+			命令模式: 命令模式有关机命令和开机命令.
+			观察者模式: 最常用的是订阅发布系统，使观察者和被观察者之间解耦，使UI层与具体事务解耦.
+		策略模式: 不同的方法完成
+		代理模式、观察者模式、（抽象）工厂模式: 
+	JDK动态代理:????
