@@ -1,4 +1,71 @@
 
+Collection:
+
+
+	Set: https://blog.csdn.net/a303549861/article/details/87375731
+
+	顺序表与链表: https://blog.csdn.net/javazejian/article/details/52953190
+
+
+	Java容器有哪些
+		Collection:
+			List:
+				LinkedList: Node存储的双向链表, 也是双向队列
+					初始化: Node存储
+					时间复杂度: 查找平均O(n), 前后插入O(1);
+				ArrayList:
+					初始化: 初始化elementData数组为空数组(final的).
+					add():
+						1. ensureCapacityInternal(): 检查是否扩容(默认10),并记录修改次数(modCount).
+							如果需要扩容: 那就Arrays.copyOf()拷贝到新
+						2. 扩容: newCapacity = oldCapacity + (oldCapacity >> 1) = 1.5倍.
+					remove():
+						1. rangeCheck,检查index
+						2. 删掉之后把后面的元素拷贝往前挪.
+						3. 没有缩容处理, 但可以手动调用trimToSize()
+					时间复杂度: 指定index插入o(n), 不指定index查找o(n)
+				Vector:
+					Stack:
+			Set:
+				HashSet:
+				TreeSet:
+				LinkedSet:
+		Map:
+			Hashtable:
+			HashMap: k的值没有顺序，常用来做统计
+				主要参数: 默认初始化容量(16), 最大容量(2^30), 加载因子(0.75), 转红黑树threshold(64);
+				put():  1. key为null放在第0个.
+					2. 计算index直接放入, 如果有值直接替换.
+					3.
+				get():
+				hash的计算规则: (h = key.hashCode()) ^ (h >>> 16) 扰动函数, h & (length-1)和长度与操作计算index下标.
+                                使用场景？
+                                HashMap在什么情况下会扩容，有哪些操作会导致扩容？
+                                HashMap push方法的执行过程？
+                                HashMap检测到hash冲突后，将元素插入在链表的末尾还是开头？为什么
+                                红黑树的特性，为什么人家一定要用红黑树而不是AVL、B树之类的？
+                                HashMap的长度为什么是2的幂次方: 用&运算代替%运算
+                                HashMap key的要求 , hashcode一致两个对象是否相等
+                                并发的HashMap为什么会引起死循环？:https://blog.csdn.net/zhuqiuhui/article/details/51849692
+                                HashMap多线程操作导致死循环问题: JDK1.7及以下: 声明两对指针，维护两个链表，依次在末端添加新的元素 解决.
+			WeakHashMap:
+			TreeMap: 顺序是Key的自然顺序
+		哪些是同步容器,哪些是并发容器:
+			同步容器: vector, stack, hashTable: 全是synchronized方法
+			并发容器:
+				ConcurrentHashMap: 线程安全的HashMap的实现
+				CopyOnWriteArrayList: 线程安全且在读操作时无锁的ArrayList
+				CopyOnWriteArraySet: 基于CopyOnWriteArrayList，不添加重复元素
+				ArrayBlockingQueue: 基于数组、先进先出、线程安全，可实现指定时间的阻塞读写，并且容量可以限制
+				LinkedBlockingQueue: 基于链表实现，读写各用一把锁，在高并发读写操作都多的情况下，性能优于ArrayBlockingQueue
+
+		队列的种类: 单队列,循环队列, https://blog.csdn.net/u011240877/article/details/52860924
+                		单队列到末尾了就不能添加了, 循环队列可以转起来.
+
+
+
+
+
 数据结构_算法:
 	加密算法:
 	排序算法:  剑指offer上面
@@ -10,18 +77,7 @@
 			2. 在数组中选一个基准数(第一个), 把大的放右边小的放左边,
 			3. 对左右两边的数组, 不断重复左右排序.
 		堆排序: 
-	树:	二叉树: 二叉树的每个结点至多只有二棵子树, 子树有左右之分. 
-			满二叉树: 每层都塞满了节点
-			完全二叉树: 除最大深度h层外, 其他层都达到了最大节点数.
-			堆: 完全二叉树: 父节点都满足大于等于其子节点的堆叫大根堆
-		二叉查找树: BST, 每个节点的左右子节点有顺序的树. 中序遍历递增的数组.
-		平衡查找树: AVL():一种平衡的二叉查找树, 增加或者减少树中的元素都有可能使这棵树由平衡变得不平衡, 需要rebalanced.
-			红黑树: 有良好的最坏情况运行时间, o(logn)时间内查找插入和删除. 黑色根节点叶子节点, 红色节点子结点必须是黑节点, 相同黑节点数量.
-		B-tree: 多路搜索树, 存储排序后的数据, 根结点的儿子数为[2, M], 所有子节点位于同一层, 任意非叶子节点最多有M个子结点(M>2)
-		B+Tree: B树的变体, 只有叶子结点存储数据, 所有叶子结点增加一个链指针, 文件索引系统.
-		B*Tree: B+树的变体, 非叶子节点也会有执行兄弟的指针. 将节点的最低利用率从1/2提到2/3
-		Trie树: 字典树, 用于统计排序和保存大量字符串, 文本字频统计.
-	
+
 	Arr
 
 
@@ -30,50 +86,32 @@
 
 
 
-	Tree
-
-
-
-
-		
-Collection & structure:
-	并发的HashMap为什么会引起死循环？:https://blog.csdn.net/zhuqiuhui/article/details/51849692
-
-	ArrayList: https://blog.csdn.net/augfun/article/details/82323164
-	LinkedList: https://blog.csdn.net/asahinokawa/article/details/80524760
-	Set: https://blog.csdn.net/a303549861/article/details/87375731
-	顺序表与链表: https://blog.csdn.net/javazejian/article/details/52953190
+	树:	二叉树: 二叉树的每个结点至多只有二棵子树, 子树有左右之分.
+			满二叉树: 每层都塞满了节点
+			完全二叉树: 除最大深度h层外, 其他层都达到了最大节点数.
+			堆: 完全二叉树: 父节点都满足大于等于其子节点的堆叫大根堆
+		二叉查找树:
+			BST, 每个节点的左右子节点有顺序的树. 中序遍历递增的数组.
+		平衡查找树:
+			AVL():一种平衡的二叉查找树, 增加或者减少树中的元素都有可能使这棵树由平衡变得不平衡, 需要rebalanced.
+			基于二分法的策略提高数据的查找速度的二叉树的数据结构.
+			红黑树: 有良好的最坏情况运行时间, o(logn)时间内查找插入和删除. 黑色根节点叶子节点, 红色节点子结点必须是黑节点, 相同黑节点数量.
+		B-tree:
+			多路搜索(又称排序)树, 存储排序后的数据, 根结点的儿子数为[2, M], 所有子节点位于同一层, 任意非叶子节点最多有M个子结点(M>2)
+			所有叶子节点均在同一层, 主要用作文件的索引。
+		B+Tree:
+			B树的变体, 只有叶子结点存储数据, 所有叶子结点增加一个链指针, 文件索引系统.
+			叶子节点的关键字从小到大有序排列.
+		B*Tree:
+			B+树的变体, 非叶子节点也会有执行兄弟的指针. 将节点的最低利用率从1/2提到2/3
+		Trie树:
+			字典树, 用于统计排序和保存大量字符串, 文本字频统计.
 	二叉树、红黑树(手绘):https://blog.csdn.net/uzv80px5v412ne/article/details/78505761, https://zhuanlan.zhihu.com/p/24367771
-	B-，B+，B*树: B-树，B+树与B*树的优缺点比较, B-树，B+树，B*树详解
-		1. 平衡二叉树: 基于二分法的策略提高数据的查找速度的二叉树的数据结构
-		2. B-树是一种平衡的多路查找(又称排序)树，在文件系统中有所应用。主要用作文件的索引。所有叶子节点均在同一层
-		3. BB+树叶子节点的关键字从小到大有序排列，左边结尾数据都会保存右边节点开始数据的指针
-		4. B*树非叶子节点也可以遍历
 	二叉查找树（BST）、平衡二叉树（Self-balancing binary search tree）、B-树，B+树与B*树的优缺点比较、 LSM 树:
-	队列的种类: 单队列,循环队列, https://blog.csdn.net/u011240877/article/details/52860924
-		单队列到末尾了就不能添加了, 循环队列可以转起来.
-	HashMap的长度为什么是2的幂次方: 用&运算代替%运算
-	HashMap多线程操作导致死循环问题: JDK1.7及以下: 声明两对指针，维护两个链表，依次在末端添加新的元素 解决.
-    ArrayList和LinkedList底层:
-        ArrayList时间复杂度: https://blog.csdn.net/weixin_33939380/article/details/87975097
-        		指定index插入o(n), 不指定index查找o(n)
-    HashMap:
-        get()方法是如何实现的: 
-        使用场景？
-        HashMap在什么情况下会扩容，有哪些操作会导致扩容？
-        HashMap push方法的执行过程？
-        HashMap检测到hash冲突后，将元素插入在链表的末尾还是开头？为什么
-        红黑树的特性，为什么人家一定要用红黑树而不是AVL、B树之类的？
-
-        HashMap key的要求 , hashcode一致两个对象是否相等
 
 
 
 
-
-
-Java容器有哪些
-哪些是同步容器,哪些是并发容器？
 
 
 
