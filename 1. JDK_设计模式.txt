@@ -1,14 +1,51 @@
 JDK:
-	Java异常类: 
-		1. 所有的异常都是从Throwable继承而来的，Throwable有两个子类，Error和Exception
-		2. Error是错误，对于所有的编译时期的错误以及系统错误都是通过Error抛出的。
-		3. Exception，是另外一个非常重要的异常子类。它规定的异常是程序本身可以处理的异常。
+	Java异常的继承层次结构:
+	        -throwable:
+	                -Exception:     -IOException
+	                                -ClassNotFoundException
+	                                -CloneNotSupportedException
+	                                -RuntimeException(不检查异常)     -IndexOutOfBoundException
+	                                                                -CLassCastException
+	                                                                - ...
+			-Error: 严重错误运行时为JVM出现问题, 对于所有的编译时期的错误以及系统错误都是通过Error抛出的
+				-VirtualMachineError    -OutOfMemoryError
+
+
+	重载和重写有什么区别，分别用什么关键字；
+		Override: 重写, 子类中和父类一样的方法签名(方法名+参数列表)
+		Overload: 重载, 同一个类中出现方法名相同参数列表不同.
 	Object类有哪些方法?: 
-		1. hash&equals
-			为什么重写equals时必须重写hashCode方法: 变成约定: 对象根据equals方式比较, 两个相同对象hashCode必须相同.
-		2. wait(), notify()
-		3. clone(), finalize()
-		4. toString()
+		1. hash&equals方法:
+			为什么重写equals时必须重写hashCode方法: 编程约定: 对象根据equals方式比较, 两个相同对象hashCode必须相同.
+		2. wait(), notify(): 等待当前对象的锁. 唤醒等待的线程.
+		3. clone(): 对象的浅复制.只有实现了Cloneable接口才可以调用该方法.
+		4. finalize():
+		4. toString(): 默认className+hashCode, 要重写
+		5. getClass(): final的native方法, 获得运行时类型
+	Java反射: 是在运行状态中, 对于任意一个类，都能够拿到并调用所有属性和方法的动态获取信息的功能.
+		运行时操作class对象.
+	Java注解: Java5引入的用来为程序元素(类/方法/成员变量)添加元数据的注释机制.
+		元注解: 修饰注解的注解, 如@Target,@Retention(生命周期),@Inherited(是否继承)
+		用处:
+			1. 生成文档: @return@param等
+			2. 跟踪代码: 实现替代配置文件
+			3. 编译时格式检查: @override等.
+		原理: 本质是一个继承了Annotation的特殊接口,
+
+			编译期扫描: 编译器编译字节码时会检测某个类或者方法的注解修饰, 这时会对于这些注解进行某些处理。
+				@Override: 检查方法签名是否在父类中.
+				@Deprecated: 过期注解
+				@SuppressWarnings:压制java的警告
+			运行期反射: Java运行时生成的动态代理实现类, 生成的动态代理对象$Proxy1. 设置AnnotationInvocationHandler作为代理的处理器
+				如果调用toString，equals，hashCode，annotationType方法, 直接用handler自己的, 如果其他的就去匹配memberValues中的值.
+				AnnotationInvocationHandler: memberValues: 键值是注解属性名和值.
+	JDK动态代理: 代理来操作原对象的方法和属性，而原对象不直接出现。 节省创建原对象的高开销, 增加附加功能
+		1. 实现 InvocationHandler接口，完成自定义调用处理器, 构造器传入并持有原对象
+                2. 通过Proxy的getProxyClass方法, 传入ClassLoader和要增强的接口, 获取对应的增强代理类$Proxy1(继承Proxy)
+                3. 利用反射获取代理类class的构造器, 并传入自定义的InvocationHandler创建代理对象$Proxy1
+                4. 每次使用$Proxy1的方法时候, 都会调用handler.invoke(proxy,method,args), 进行增强并调用原对象.
+        Java对象序列化: ObjectOutputStream, ObjectInputStream.
+
 	设计模式:
 		手写几种单例模式: 
 			静态内部类方式: 初始化阶段, jvm会获取一个初始化的锁. 内部类有一个static的外部类实例. return InnerClass.staticInnerClassSingleton;
@@ -27,4 +64,15 @@ JDK:
 			观察者模式: 最常用的是订阅发布系统，使观察者和被观察者之间解耦，使UI层与具体事务解耦.
 		策略模式: 不同的方法完成
 		代理模式、观察者模式、（抽象）工厂模式: 
-	JDK动态代理:????
+
+	Java如何实现线程安全:
+		互斥同步: Synchronized, Lock
+		非阻塞同步: CAS,
+
+
+	自动装箱与拆箱:
+		自动装箱: 基本类型自动转为包装类型: 字节码文件自动变成: Integer total = Integer.valueOf(99);[并做了一个缓存arr]
+		自动拆箱: 字节码自动变成int totalPrim = total.intValue();直接返回value.
+
+
+

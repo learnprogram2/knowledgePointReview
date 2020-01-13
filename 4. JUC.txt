@@ -5,6 +5,8 @@ JUC:
 		get: ?
 		set: ?
 		ConcurrentHashMap: get.set
+		与HashMap对比:
+		各自优势:
 	并发编程知识: https://segmentfault.com/blog/ressmix_multithread
 	TransferQueue: 生产者可以马上知道是否被消费的队列. https://www.cnblogs.com/lighten/p/7505355.html
 	SynchronousQueue: 不存储元素的阻塞队列，会直接将任务交给消费者，必须等队列中的添加元素被消费后才能继续添加新的元素 
@@ -69,7 +71,8 @@ JUC:
 			如何支持带返回值的任务呢: 提交任务的时候不需要阻塞，get返回值的时候才可能需要阻塞
 				线程池实现FutureExecutor接口, 接收callable的任务, 并提供get的方法(可能阻塞)
 			任务执行的过程中抛出异常: 设置成一种状态返回给主线程.
-		为什么要用线程池?: 
+		为什么要用线程池?:
+		线程池的好处:
 		使用时注意什么?
 		核心线程数和最大线程数设置成多少?https://mp.weixin.qq.com/s/tV48ZCwZUAUO-1xL7uESUA
 			1. IO密集: 最佳线程数目=（（线程等待时间+线程 CPU 时间）/线程 CPU 时间 ）* CPU 数目。
@@ -82,3 +85,17 @@ JUC:
 	AQS: http://www.cnblogs.com/waterystone/p/4920797.html
 	countDownLatch: 
 	Semaphore: park()/unpark()
+
+	死锁原因
+	产生死锁的4个必要条件：互斥条件；请求与保持条件；不剥夺条件；循环等待条件；tryLock破坏了不剥夺条件。
+
+讲一讲AtomicInteger，为什么要用CAS而不是synchronized？
+
+线程和进程的区别
+多线程的过程；
+
+
+JUC 包中的原子类是哪4类?
+
+讲讲 AtomicInteger 的使用和原理
+

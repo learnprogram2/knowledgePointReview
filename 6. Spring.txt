@@ -112,4 +112,15 @@ Spring:
 			3. PROPAGATION_never: 非事务方式运行, 当前不能有事务
 		3. propagation_nested: 当前有事务就见一个新事务, 没有事务也建一个新事物.
 	MVC工作原理: https://www.cnblogs.com/yoci/p/10642493.html
-使用场景及限制: 
+使用场景及限制:
+
+
+
+请详细描述springmvc处理请求全流程？
+
+spring 一个bean装配的过程？
+
+AOP 和 IOC 的原理？
+
+aop 原理
+
