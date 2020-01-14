@@ -49,14 +49,14 @@ Spring:
 		3. 利用注解实现AOP: @Aspect, @Before, @after
 	IOC: https://javadoop.com/post/spring-ioc
 		控制反转是一种设计思想, 意味着将你设计好的对象交给容器控制，而不是传统的在你的对象内部直接控制。
-	DI: 依赖注入, IoC的一个重点是在系统运行中，动态的向某个对象提供它所需要的其他对象。
-		这一点是通过DI（Dependency Injection，依赖注入）来实现的。
-	自动装配的五种方式:spring引入context文件头
-		no: 缺省情况, 通过"ref"属性手动设定
-		byName: 根据属性名称自动装配
-		byType: 按数据类型自动装配。如果一个bean的数据类型是用其它bean属性的数据类型，兼容并自动装配它。
-		constructor: 在构造函数参数的byType方式
-		autodetect: 如果找到默认的构造函数, 使用“自动装配用构造”; 否则使用“按类型自动装配”.
+		DI: 依赖注入, IoC的一个重点是在系统运行中，动态的向某个对象提供它所需要的其他对象。
+			这一点是通过DI（Dependency Injection，依赖注入）来实现的。
+		自动装配的五种方式:spring引入context文件头
+			no: 缺省情况, 通过"ref"属性手动设定
+			byName: 根据属性名称自动装配
+			byType: 按数据类型自动装配。如果一个bean的数据类型是用其它bean属性的数据类型，兼容并自动装配它。
+			constructor: 在构造函数参数的byType方式
+			autodetect: 如果找到默认的构造函数, 使用“自动装配用构造”; 否则使用“按类型自动装配”.
 	springboot和spring的区别: 
 	Spring Bean 的作用域: https://blog.csdn.net/weixin_33811539/article/details/92420106
 		1. singleton: IOC容器内只有一个实例. (默认)
@@ -65,24 +65,21 @@ Spring:
 		4. session, 每个session都用新的.
 		5. globalSession: 类似session, 不过要protlet应用环境.
 	Bean 生命周期: spring 容器管理singleton作用域下的bean生命周期, 在doCreate方法中-https://www.jianshu.com/p/1dec08d290c1
-		1. 实例化-instantiation-createBeanInstance()
-		2. 属性赋值-populate0-populateBean()
-		3. 初始化-initialization-initializeBean()
-		4. 销毁-destruction
-		实例化bean对象(通过构造方法或者工厂方法)
-		设置对象属性(setter等)（依赖注入）
-		如果Bean实现了BeanNameAware接口，工厂调用Bean的setBeanName()方法传递Bean的ID。（和下面的一条均属于检查Aware接口）
-		如果Bean实现了BeanFactoryAware接口，工厂调用setBeanFactory()方法传入工厂自身
-		将Bean实例传递给Bean的前置处理器的postProcessBeforeInitialization(Object bean, String beanname)方法, 自定义.
-		调用Bean的初始化方法
-		将Bean实例传递给Bean的后置处理器的postProcessAfterInitialization(Object bean, String beanname)方法, 自定义.
-		使用Bean
-		容器关闭之前，调用Bean的销毁方法
+		1. 实例化bean对象(通过构造方法或者工厂方法)
+		2. 设置对象属性(setter等)（依赖注入）
+			如果Bean实现了BeanNameAware接口，工厂调用Bean的setBeanName()方法传递Bean的ID。（和下面的一条均属于检查Aware接口）
+			如果Bean实现了BeanFactoryAware接口，工厂调用setBeanFactory()方法传入工厂自身
+		3. 将Bean实例传递给Bean的前置处理器的postProcessBeforeInitialization(Object bean, String beanname)方法, 自定义.
+		4. 调用Bean的初始化方法 initMethod
+		5. 将Bean实例传递给Bean的后置处理器的postProcessAfterInitialization(Object bean, String beanname)方法, 自定义.
+		6. 使用Bean
+		7. 容器关闭之前，调用Bean的销毁方法
 	Bean是线程安全的吗:
 		Spring框架并没有对单例bean进行任何多线程的封装处理。
 		关于单例bean的线程安全和并发问题需要开发者自行去搞定。
 	注入javaCollection:
 		集合类的配置元素: list, set, map, props.
+
 	Spring中使用的设计模式:
 		代理模式，在AOP中被使用最多。
 		单例模式，在Spring配置文件中定义bean的时候默认的是单例模式。
@@ -91,27 +88,36 @@ Spring:
 		前端控制器：spring用前端控制器DispatcherServlet对请求进行分发
 		观察者模式: Spring 事件驱动模型
 		装饰者模式: Spring 中用到的包装器模式在类名上含有 Wrapper或者 Decorator
+
 	Spring中事件:
 		1. 上下文更新时间, 上下文关闭事件
 		2. 上下文开始事件, 上下文停止事件
 		3. 请求处理事件
-	Spring 事务中的隔离级别: 5 TransactionDefinition 接口 ?????????
-		1. DEFAULT: 默认隔离界别: mysql重复读
-		2. read_uncommitted: 读未提交
-		3. READ_COMMITED: 
-		4. REPEATABLE_READ
-		5. SERLALIZABLE
-	Spring 事务中的事务传播行为: 7 
-		1. 支持当前事务:
-			1. PROPAGATION_REQUIRED: 默认, 支持当前事务, 没有事务就新建一个.
-			2. propagation_supports: 支持当前事务, 没有也不新建
-			3. propagation_mandatory: 支持当前事务, 当前必须有事务
-		2. 不支持当前事务:
-			1. PROPAGATION_REQUIRED_new: 创建一个新事务
-			2. PROPAGATION_not_support: 非事务方式运行.
-			3. PROPAGATION_never: 非事务方式运行, 当前不能有事务
-		3. propagation_nested: 当前有事务就见一个新事务, 没有事务也建一个新事物.
+
+	Spring 事务
+		隔离级别:  TransactionDefinition 接口 ?????????
+			1. DEFAULT: 默认隔离界别: mysql重复读
+			2. read_uncommitted: 读未提交
+			3. READ_COMMITED:
+			4. REPEATABLE_READ
+			5. SERLALIZABLE
+		事务传播行为: 7
+			1. 支持当前事务:
+				1. PROPAGATION_REQUIRED: 默认, 支持当前事务, 没有事务就新建一个.
+				2. propagation_supports: 支持当前事务, 没有也不新建
+				3. propagation_mandatory: 支持当前事务, 当前必须有事务
+			2. 不支持当前事务:
+				1. PROPAGATION_REQUIRED_new: 创建一个新事务
+				2. PROPAGATION_not_support: 非事务方式运行.
+				3. PROPAGATION_never: 非事务方式运行, 当前不能有事务
+			3. propagation_nested: 当前有事务就见一个新事务, 没有事务也建一个新事物.
 	MVC工作原理: https://www.cnblogs.com/yoci/p/10642493.html
+		1. 用户请求到dispatcherServlet.doDispatcher
+		2. HandlerMapping查找执行链
+		3. handlerAdapter适配器负责执行执行链, 拿到modelAndView
+		4. ViewResolver视图解析器解析视图拿到View对象.
+		5. jsp/freemarker渲染视图.
+
 使用场景及限制:
 
 

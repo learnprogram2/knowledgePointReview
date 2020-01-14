@@ -164,6 +164,13 @@ MongoDB和Redis和 memcached适用哪些场景？
 
 
 热点账户问题(项目中有就会问)
+	redis-cli –hotkeys
+	服务端缓存：即将热点数据缓存至服务端的内存中, ehcache
+        备份热点Key：即将热点Key+随机数，随机分配至Redis其他节点中。这样访问热点key的时候就不会全部命中到一台机器上了。
+保证Redis和服务端热点Key的数据一致性:
+	Redis的消息通知机制, 对热点key建立监听, 热点key更新后客户端也更新.
+
+
 
 集群中怎么控制session；
 
