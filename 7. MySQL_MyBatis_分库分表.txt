@@ -45,10 +45,12 @@ MySQL:
 			4. 删除长期未用的索引.
 	从底层解释最左匹配原则:
 		索引底层是B+树, 联合索引(a,b)也是B+树. 联合索引的a是有顺序的, B的顺序在同一个a也是有顺序的. 所以最左有顺序, 次左顺序是相对的
+
 	查询缓存: 执行查询语句的时候，会先查询缓存。不过，MySQL 8.0 版本后移除. query_cache_type=1
 		开启查询缓存后在同样的查询条件以及数据情况下，会直接在缓存中返回结果。
 		表（数据或结构）发生变化，那么和这张表相关的所有缓存数据都将失效。
 		带来了额外的开销，每次查询后都要做一次缓存操作，失效后还要销毁。
+
 	事务:
 		四大特性: A(atomicity)C(consistency)I(isolation)D(Durability) 原子性, 一致性, 隔离性, 持久性.
 		并发事务带来的问题:
@@ -62,6 +64,7 @@ MySQL:
 			2. read-committed: 读提交, 解决了脏读.
 			3. repeatable-read: 可重复读, 解决了不可重复读. InnoDB+Next-KeyLock可以解决幻读.
 			4. Serializable: 串行化, 都解决了.
+
 	锁: https://blog.csdn.net/eygle/article/details/96835813
 		MyISAM与InnoDB引擎所使用: MyISAM采用表级锁, InnoDB支持行级锁(row-level locking)和表级锁,默认为行级锁, InnDB行锁是锁索引上的索引项
 		共享锁&排他锁:
@@ -94,7 +97,7 @@ MySQL:
 			5. 多个程序尽量按照相同的顺序访问表.
 			6. 同一事物金科嗯那个一次性锁定所需要的资源.
 		锁级别, 什么情况下会发生:
-		    表锁:
+		    表锁: 成功使用索引时锁行，否则锁表
 		    区间锁:
 		    行锁:
 		    页锁、乐观锁、悲观锁？
@@ -119,7 +122,7 @@ MySQL:
 		记录两个日志模块:
 			最初InnoDB引擎是以插件形式插入MySQL的. redolog是InnoDB引擎特有的保证crash-safe.
 			redoLog要引入prepare预提交状态: 
-				如果: 1. redoLog先提交再写binLog, 中间机器挂了binLog没有被写入, binLog备份主从会丢失.
+				如果:    1. redoLog先提交再写binLog, 中间机器挂了binLog没有被写入, binLog备份主从会丢失.
 					2. 先写入binLog然后写redoLog, 中间挂掉恢复的时候本机无法恢复这一条数据.
 				引入prepare后, 如果恢复时候redoLog是prepare, 就去判断binLog是否完整.
 	查询优化: 
@@ -133,6 +136,8 @@ MySQL:
 	MyISAM与InnoDB的理解: 聚簇索引/非聚簇索引
 	主键与性能:
 		为什么是B+而不是B或hash
+		B+树非叶子节点只存索引, 更小可以放在内存, IO也会少.
+		B+树叶子节点的链表操作很好.
 	慢sql是哪条???
 		慢sql日志可以设置.
 	explain 可以看到哪些信息, 结果列是什么:???
@@ -171,6 +176,8 @@ MySQL:
 	索引查询优化:
 		尽量不要用or，如果可以用union代替
 	什么是区分度比较高的索引:?????
+		区别度能达到0.1,索引的性能就可以接受
+		select count(distinct left(xrow, 10)) from table1
 
 SQL优化，常用的索引？
 
