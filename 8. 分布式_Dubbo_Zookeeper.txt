@@ -71,16 +71,16 @@
 Dubbo:
 	Dubbo工作原理: 
 		分为十层架构:
-			1. service层, provider和consumer 工作内容
-			2. config层, 提供自定配置
-			3. proxy层, 代理层, 所有的consumerprovider都会生成代理, 代理之间进行网络通信.
-			4. registry层, provider注册自己服务, consumer寻找可用服务.
-			5. cluster层, 多个provider的集群
-			6. monitor层, 统计信息监控.
-			7. protocol层, 网络通信层.
-			8. exchange层, 信息交换.
-			9. transport层,
-			10. serialize层, 序列化.
+			1. service 层，接口层，给服务提供者和消费者来实现的
+                        2. config 层，配置层，主要是对 dubbo 进行各种配置的
+                        3. proxy 层，服务代理层，无论是 consumer 还是 provider，dubbo 都会给你生成代理，代理之间进行网络通信
+                        4. registry 层，服务注册层，负责服务的注册与发现
+                        5. cluster 层，集群层，封装多个服务提供者的路由以及负载均衡，将多个实例组合成一个服务
+                        6. monitor 层，监控层，对 rpc 接口的调用次数和调用时间进行监控
+                        7. protocal 层，远程调用层，封装 rpc 调用
+                        8. exchange 层，信息交换层，封装请求响应模式，同步转异步
+                        9. transport 层，网络传输层，抽象 mina 和 netty 为统一接口
+                        10. serialize 层，数据序列化层
 		工作原理:
 			1）第一步，provider向注册中心去注册
 			2）第二步，consumer从注册中心订阅服务，注册中心会通知consumer注册好的服务
@@ -92,27 +92,52 @@ Dubbo:
 			单一长连接, NIO异步通信(高并发), hessian序列化协议, 
 			高并发, 但是传输数据量小, consumer远远大于provider
 		2.rmi协议:
+			java二进制序列化, 适合生产消费者数量均等, 文件传输.
 		3.hession协议:
+			走hessian序列化协议，多个短连接，适用于provider比consumer数量还多
 		4.http协议： json序列化
-		5.webservice协议： soap文本序列化。
-	序列化协议, hessian数据结构, PB?
-	Dubbo 的负载均衡策略: 
+		5.webservice协议: Http短连接, 适用系统集成和跨语言调用. soap文本序列化。
+
+	序列化协议:  基于不同的通信协议，支持多种序列化协议。
+		Hession:
+			原理:
+				1. client与server基于http-post方式交互，
+				2. 辅助信息，封装在http header, 比如做安全校验token
+				3. 交互核心数据通过post的body进行字节流传输: 比如调用的方法和参数列表
+			hessian数据结构:
+				对象序列化机制有8种原始类型:
+					原始二进制数据, boolean, 64-bit date(毫秒值), 64-bit double,
+	                                32-bit int, 64-bit long, null, UTF-8编码的string
+				3种递归类型: list, map, objectForObjects
+				ref: 用来表示对共享对象的引用
+		Protocol Buffer:
+			Google 出品的轻量高效的结构化数据存储格式, 性能强.
+			1. 使用proto编译器, 自动进行序列化和反序列化.
+			2. 数据压缩效果好
+
+		通信框架:
+			netty: 默认
+
+	负载均衡策略:
 		random loadbalance: 默认的随机, 根据权重随机配比.
 		roundrobin loadbalance: 轮询. 也可以调整权重
 		leastactive loadbalance: 某个机器性能越差，那么接收的请求越少
 		consistanthash loadbalance: 一致性hash, 相同参数的请求一定分发到一个provider上去
-	Dubbo 集群容错策略: 
+	集群容错策略:
 		failover cluster模式: 默认, 失败自动切换，自动重试其他机器
 		failfast cluster模式: 一次调用失败就立即失败，常见于写操作
 		failsafe cluster模式: 出现异常时忽略掉，常用于不重要的接口调用，比如记录日志
 		failbackc cluster模式: 失败了后台自动记录请求，然后定时重发，比较适合于写消息队列这种
 		forking cluster: 并行调用多个provider，只要一个成功就立即返回
 		broadcacst cluster: 逐个调用所有的provider
+
 	Dubbo 动态代理策略: 
 	服务注册, 消费者发现:
+
 	SPI思想: 例子:JDBC接口
 		ExtensionLoader.getExtension.
 		@SPI + @Adapter
+
 	如何进行服务治理, 降级, 失败重试和超时重试: ???
 		服务治理:
 		服务降级:
