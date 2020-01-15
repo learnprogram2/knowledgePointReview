@@ -127,7 +127,42 @@ ZooKeeper:
 		分布式锁: 使用创建node, 和监听事件, 来实现锁.
 		元数据/配置管理: node里面可以写入元数据.
 		HA高可用性场景: 使用临时节点实现监听服务健康状态. 实现主备切换.
-	zk选举: ????
+	zk选举:
+		角色分类: leader(投票发起和决策), follower(参与投票), observer(不参与投票)
+
+		Zookeeper使用主进程来接收并处理事务请求, 采用ZAB原子广播协议把服务器数据状态变更广播到副本进程.
+			原子广播协议, 类似二阶段提交过程,  Leader服务器会为其生成事务Proposal, 将其发送给集群中其余所有的机器, 然后再收集各自的选票进行事务提交
+		原子广播由Zab协议实现, 工作模式:
+			恢复模式(选主):
+			广播模式(同步):
+				1. leader等待server连接；
+                                2. Follower连接leader，将最大的zxid发送给leader；
+                                3. Leader根据follower的zxid确定同步点；
+                                4. 完成同步后通知follower 已经成为uptodate状态；
+                                5. Follower收到uptodate消息后，又可以重新接受client的请求进行服务了。
+		每个server工作中的三种状态:
+			LOOKING：当前Server不知道leader是谁，正在搜寻
+                        LEADING：当前Server即为选举出来的leader
+                        FOLLOWING：leader已经选举出来，当前Server与之同步
+		选举算法:
+			basic paxos:
+			fast paxos: 默认
+		选举过程:
+			当一台服务器进入Leader 选举流程时, 集群中可能现在本来就有Leader, 那么就被告知当前Leader信息了, 直接就变成Follower
+			1. 每个Server发出一个投票 为自己做leader投票
+				投票包括[选取leader服务器的myid, leader的ZXID].发给其他所有的zookeeper.
+			2. 接收来自各个服务器的投票
+				检查投票的有效性, 是否是本轮投票是否是LOOKING状态的服务器.
+			3. 处理投票
+				zookeeper将收到的投票和自己的投票PK, 把自己的投票更新成更优先的票., 再把投票发出去
+				检查ZXID(事务ID), ZXID大的优先, 否则选MYID大的
+			4. 统计投票:
+				统计是否有过半机器收到相同的投票信息. 过半即选出leader
+			5. 改变服务器状态
+                              确定了Leader, 所有的服务器更新自己的状态, Follower变更成FOLLWING, Leader变成LEADING.
+
+
+
 
 使用场景及限制: 
 
