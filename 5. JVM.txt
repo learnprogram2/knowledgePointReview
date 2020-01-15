@@ -204,6 +204,11 @@ JVM:
 		Minor Gc 和 Full GC 有什么不同呢: 
 			新生代GC(MinorGC):指发生新生代的的垃圾收集动作, MinorGC非常频繁, 回收速度一般也比较快.
 			老年代GC(MajorGC/FullGC):指发生在老年代的GC, 出现了MajorGC经常会伴随MinorGC(并非绝对),MajorGC的速度一般会比MinorGC的慢10倍以上
+		减少GC开销的编码技巧: 减少短期对象的分配
+			1. 避免隐式String字符串
+			2. 计划好List的容量.
+			3. 分散对象创建或删除的时间
+			4. 少使用静态对象变量
 	JVM哪些参数: https://segmentfault.com/a/1190000010603813
 		1. 堆内存相关: 
 			1. 显式指定初始化堆内存大小–Xms和-Xmx
@@ -225,9 +230,28 @@ JVM:
 				3. 大对象进入老年代, 大对象在新生代会出现空间不足, -XX:PretenureSizeThreshold 可以设置直接进入老年代的对象大小。
 				4. 设置稳定的堆大小
 				5. 不需要优化: MinorGC 执行时间不到50ms； Minor GC 执行不频繁，约10秒一次； Full GC 执行时间不到1s； Full GC 执行频率不算频繁，不低于10分钟1次。
+		3. 实际:
+		        -Xms3g -Xmx3g JVM堆内存
+                        -XX:PermSize=256M -XX:MaxPermSize=1024m 非堆内存
+                        -XX:NewSize=2048m -XX:MaxNewSize=2048m
+                        -XX:SurvivorRatio=10 from 、to分别占Young Generation的空间的1/10，Eden占8/10;
+                            NewRatio默认2, 新生代:老年1:2
+			调优:    1. -XX:NewSize, -XX:MaxNewSize 显示设置为
+				2. SurvivorRatio调整为10, 增加from的大小
+		4. OOM事件:
+                        1. Quartz定时任务内存泄漏: The web application [/project] appears to have started a thread named [SchedulerFactoryBean-Worker-1] but has faild to stop it
+                                原因: 系统在关闭时没有给Quartz时间来停止它所创建的定时任务，导致线程未被停止系统便已经关闭了。
+                                解决: 配置QuartzContextListener实现ServletContextListener，并在ContextDestroyed时执行SchedulerFactoryBean的shutdown方法
+                        2. 线程未关闭异常:
+                                原因: httpAsyncClient客户端在请求失败的情况下，httpclient.close()此处会导致主线程阻塞，
+                                        经源码发现close方法内部，在线程连接池关闭以后,
+                                        httpAsyncClient对应线程还处于运行之中，一直阻塞在epollWait
+                        3. 创建超大数组:
+                                原因: 定时任务项目跑数据, OOM
+                                解决: JVM调整新生代大小-Xmx, 并增加编码规则.
 	JVM 自带查看工具: 
 		JPS: 类似于ps命令, 查看所有java进程启动类, 传入参数和 Java 虚拟机参数等信息；
-		jstat: (JVM Statistics Monitoring Tool), 收集 HotSpot 虚拟机各方面的运行数据
+		jstat: (JVM Statistics Monitoring Tool), 收集 HotSpot 虚拟机各方面的运行数据, 查看GC同济.
 		jinfo (Configuration Info for Java) : Configuration Info forJava,显示虚拟机配置信息;
 		jmap (Memory Map for Java) :生成堆转储快照;
 		jhat (JVM Heap Dump Browser ) : 用于分析 heapdump 文件，它会建立一个 HTTP/HTML 服务器，让用户可以在浏览器上查看分析结果;
@@ -271,6 +295,15 @@ JVM内存模型(JMM): 内存模型规范, 屏蔽了硬件/系统差异.
 		对象的内存布局...
 		对象的定位: 句柄池, 直接指针.
 	JMM的happens before原则，程序顺序原则，锁原则，线程中断原则，传递性原则
+
+
+
+
+
+
+
+
+
 
 
 线程运行时候代码在哪里, 同步方法内容在哪里?
