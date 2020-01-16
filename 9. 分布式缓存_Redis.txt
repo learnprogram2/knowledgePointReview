@@ -77,7 +77,7 @@ Radis:
 		过期淘汰机制: 内存占用过多, 会进行内存淘汰.
 			1. noeviction模式:内存不足以写入新数据, 新写入操作会报错.
 			2. allkeys-lru: 内存不足,移除最近最少使用的key(常用
-			3. allkeys-random: 随即删除
+			3. allkeys-random: 随机删除
 			4. volatile-lru:内存不足, 在有过期时间的key中,移除最近最少使用的key.
 			5. volatile-random:内存不足,在设置过期时间的key中随即删除.
 			6. volatile-ttl: 内存不足, 在设置过期时间的key中优先移除最快过期key.
