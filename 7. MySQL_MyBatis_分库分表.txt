@@ -4,33 +4,76 @@ MySQL:
 		1. MyISAM: 性能极佳, 不支持事务, 只有表锁, 崩溃后无法安全恢复. 适合读密集情况.
 		2. InnoDB: 支持事务, 行级锁, 支持外键, 支持MVCC(读提交和可重复读级别). 
 		在用到聚簇索引和需要访问的数据可以放内存的时候, innoDB非常快.
-	存储结构: 基本存储结构是页. 所有数据都存储到了表空间中. 表空间依次由:段(segment)->区(extent)->页(page)组成.
-		1. 段有索引段: 非叶子节点, 数据段: 叶子节点. 回滚段
-		2. 区: 64个连续的页组成, 16*64=1mb, 
-		3. 每个页16kb, 包含fileHeader(38字节), pageHeader(56字节), infimum+supermum(26字节), userRecord, freeSpace, pageDirectory, failTailer(8字节)
+	存储结构/基本存储结构: 基本存储结构是页.
+		1. 所有数据都存储到了表空间中. 表空间依次由:段(segment)->区(extent)->页(page)组成.
+		2. 段有索引段: 非叶子节点, 数据段: 叶子节点. 回滚段
+		3. 区: 64个连续的页组成, 16*64=1mb,
+		4. 页是数据库管理磁盘的最小单位, 整页读入内存(一下子读多个磁盘块).
+		5. 每个页16kb, 包含fileHeader(38字节), pageHeader(56字节), infimum+supermum(26字节), userRecord, freeSpace, pageDirectory, failTailer(8字节)
 			数据页, undo页, 系统页, 事务数据页....
-		4. 所有的数据页可以组成一个双向链表, 数据页内的记录组成单向链表.
+		6. 所有的数据页可以组成一个双向链表, 数据页内的记录组成单向链表.
 			据页都会为存储在它里边儿的记录生成一个页目录, 为主键二分法定位记录, 其他列要遍历查找.
 	字符集和校对规则: 字符集指的是一种从二进制编码到某类字符符号的映射, 校对规则则是指某种字符集下的排序规则.
-	InnoDB后台线程: 4个IO thread, 1个master thread, 1个锁监控线程, 1个错误监控线程.
+	InnoDB后台线程: https://blog.51cto.com/lijianjun/1945517
+		4个IO thread, 1个master thread, 1个锁监控线程, 1个错误监控线程.
 		1. Master Thread:核心后台线程, 负责把缓冲池中的数据异步刷新到磁盘中, 包括脏页的刷新, 合并插入缓冲, undo页的回收等.
-			大部分操作, 由每1s操作和每10s操作. 
+			大部分操作, 由每1s操作和每10s操作.
+		2. IO Thread: 处理IO请求的
 	InnoDB内存模型: 
-		1. 重做日志缓冲: 重要日志信息先放入, 刷新到重做日志文件中.
-		2. 额外内存池: 每个缓冲池的帧缓冲和对应的缓冲对象(记录LRU,锁等信息) 在额外内存池中申请
-		3. 缓冲池: 缓冲池是占最大的内存部分.  按照LRU(least recent used, 最近最少使用) 算法保留缓存页.*修改**: 
-			修改的时候首先修改缓冲池中的页, 然后按照一定频率把修改后的脏页刷新到文件.   包括索引页, 数据页, undo页, 插入缓冲(insert buffer)等
+		1. 重做日志缓冲: 重要日志信息先放入, 刷新到重做日志文件中. redoLog
+		2. 额外内存池: 每个缓冲池的帧缓冲和对应的缓冲对象(记录LRU,锁等信息) 在额外内存池中申请,
+		3. 缓冲池: 缓冲池是占最大的内存部分.  按照LRU(least recent used, 最近最少使用) 算法保留缓存页.
+			*修改*:修改的时候首先修改缓冲池中的页, 然后按照一定频率把修改后的脏页刷新到文件.
+			包括索引页, 数据页, undo页, 插入缓冲(insert buffer)等
 	InnoDB关键特性:
 		1. 插入缓存: 
-		2. 两次写(double write):
+		2. 两次写(double write): 先写到redoLog, 然后再写到doubleWriteBuffer里, 然后两次写如数据文件.
+			恢复时候通过两次写第一次写入的共享表空间恢复, 然后回复redoLog.
 		3. 自适应哈希索引(adaptiveHashIndex): 监控对表上二级索引的查找，如果发现某二级索引被频繁访问，二级索引成为热数据，建立哈希索引可以带来速度的提升
 	日志:
-		1. binLog: 二进制日志记录了数据库更改的所有操作, **不包括select/show操作.**
-		2. redoLog: 默认有ib_logfile0和ib_logfile1两个文件, 是innoDB引擎的重做日志文件. **记录了InnoDB引擎的事务日志.**
+		1. binLog:
+			基于行格式的逻辑性的语句, 是逻辑的SQL.
+			二进制日志记录了数据库更改的所有操作, **不包括select/show操作.**
+		2. redoLog:
+			物理日志，记录数据库中每个页的修改.
+			默认有ib_logfile0和ib_logfile1两个文件, 是innoDB引擎的重做日志文件. **记录了InnoDB引擎的事务日志.**
+		3. undoLog: 提供回滚和多个行版本控制(MVCC)
+			逻辑日志, 数据修改的时候，不仅记录了redo，还记录了相对应的undo.
+			可以认为当delete一条记录时，undo log中会记录一条对应的insert记录，反之亦然
+
+	一条sql语句在mysql中如何执行的:
+                server层: 实现跨存储引擎的功能
+                        1. 连接器： 身份认证和权限相关(登录 MySQL 的时候)。
+                        2. 查询缓存: 执行查询语句的时候，会先查询缓存（MySQL 8.0 版本后移除）。
+                        3. 分析器: 没有命中缓存的话，分析器先词法分析看SQL语句要干嘛，再语法分析检查SQL语句语法是否正确。
+                        4. 优化器: 按照 MySQL 认为最优的方案去执行。多个索引的时候该如何选择索引，多表查询的时候如何选择关联顺序等。
+                        5. 执行器: 首先执行前会校验该用户权限，然后从存储引擎返回数据。
+                        6. 日志模块（binlog）, innoDB多一个自己的redoLog.
+                存储引擎: 负责数据的存储与读取
+                更新语句:
+                        1. 先查到数据, 如果缓存有也开启了, 那就用缓存;
+                        2. 调用引擎 API 接口，写入更改的数据并保存在内存里,写入redoLog.
+                                 redo log 进入 prepare 状态，然后告诉执行器，执行完成了，随时可以提交。
+                        3. 执行器收到通知后记录 binlog，然后调用引擎接口，提交 redo log 为提交状态。
+                        4. 完成.
+                记录两个日志模块:
+                        最初InnoDB引擎是以插件形式插入MySQL的. redoLog是InnoDB引擎特有的保证crash-safe.
+                        redoLog要引入prepare预提交状态:
+                                如果:    1. redoLog先提交再写binLog, 中间机器挂了binLog没有被写入, binLog备份主从会丢失.
+                                        2. 先写入binLog然后写redoLog, 中间挂掉恢复的时候本机无法恢复这一条数据.
+                                引入prepare后, 如果恢复时候redoLog是prepare, 就去判断binLog是否完整.
+        	查询优化:
+        		1. 带索引限定数据范围, 禁止不带任何限制数据范围条件的查询语句
+        		2. 读写分离
+        		3. 垂直分区, 虽然会有冗余和join操作, 但会使列数据变小, 查询时减少读取的Block数, 减少I/O次数
+        		4. 严禁左模糊或全模糊查询.
+        		5. 不得使用外键与级联，一切外键概念必须在应用层解决。
+        		6. 禁止在表中建立预留字段
+
 	数据库索引: 
 		实现: 将无序的数据变成有序(相对) 
 			https://camo.githubusercontent.com/c63688b141c3562bbf4fb4b719ab027c6dea91e9/687474703a2f2f6d792d626c6f672d746f2d7573652e6f73732d636e2d6265696a696e672e616c6979756e63732e636f6d2f31382d31302d322f38393333383034372e6a7067
-		hash索引: 单条记录查询时, 最快. 
+		hash索引: 单条记录查询时, 最快. innodb不支持, 只支持自适应hash
 		BTree索引: B+Tree, 
 			MyISAM: B+Tree叶节点的data域存放的是数据记录的地址。以 data 域的值为地址读取相应的数据记录, 这是非聚簇索引.
 			InnoDB: 其数据文件本身就是索引文件。其表数据文件本身就是按B+Tree组织的一个索引结构，叶节点data域保存了完整的数据记录.
@@ -62,7 +105,7 @@ MySQL:
 		事务隔离级别:
 			1. read-uncommitted: 读未提交, 会有脏读.
 			2. read-committed: 读提交, 解决了脏读.
-			3. repeatable-read: 可重复读, 解决了不可重复读. InnoDB+Next-KeyLock可以解决幻读.
+			3. repeatable-read: 可重复读, 解决了不可重复读. 默认. InnoDB+Next-KeyLock可以解决幻读.
 			4. Serializable: 串行化, 都解决了.
 
 	锁: https://blog.csdn.net/eygle/article/details/96835813
@@ -104,34 +147,7 @@ MySQL:
 		    乐观锁如何保证线程安全？
 
 
-	一条sql语句在mysql中如何执行的:
-		server层: 实现跨存储引擎的功能
-			1. 连接器： 身份认证和权限相关(登录 MySQL 的时候)。
-			2. 查询缓存: 执行查询语句的时候，会先查询缓存（MySQL 8.0 版本后移除）。
-			3. 分析器: 没有命中缓存的话，分析器先词法分析看SQL语句要干嘛，再语法分析检查SQL语句语法是否正确。
-			4. 优化器: 按照 MySQL 认为最优的方案去执行。多个索引的时候该如何选择索引，多表查询的时候如何选择关联顺序等。
-			5. 执行器: 首先执行前会校验该用户权限，然后从存储引擎返回数据。
-			6. 日志模块（binlog）, innoDB多一个自己的redoLog.
-		存储引擎: 负责数据的存储与读取
-		更新语句: 
-			1. 先查到数据, 如果缓存有也开启了, 那就用缓存;
-			2. 调用引擎 API 接口，写入更改的数据并保存在内存里,写入redoLog.
-				 redo log 进入 prepare 状态，然后告诉执行器，执行完成了，随时可以提交。
-			3. 执行器收到通知后记录 binlog，然后调用引擎接口，提交 redo log 为提交状态。
-			4. 完成.
-		记录两个日志模块:
-			最初InnoDB引擎是以插件形式插入MySQL的. redolog是InnoDB引擎特有的保证crash-safe.
-			redoLog要引入prepare预提交状态: 
-				如果:    1. redoLog先提交再写binLog, 中间机器挂了binLog没有被写入, binLog备份主从会丢失.
-					2. 先写入binLog然后写redoLog, 中间挂掉恢复的时候本机无法恢复这一条数据.
-				引入prepare后, 如果恢复时候redoLog是prepare, 就去判断binLog是否完整.
-	查询优化: 
-		1. 带索引限定数据范围, 禁止不带任何限制数据范围条件的查询语句
-		2. 读写分离
-		3. 垂直分区, 虽然会有冗余和join操作, 但会使列数据变小, 查询时减少读取的Block数, 减少I/O次数
-		4. 严禁左模糊或全模糊查询. 
-		5. 不得使用外键与级联，一切外键概念必须在应用层解决。
-		6. 禁止在表中建立预留字段
+
 	系统的MySQL并发: 2000? top:5000?
 	MyISAM与InnoDB的理解: 聚簇索引/非聚簇索引
 	主键与性能:
@@ -151,15 +167,16 @@ MySQL:
 		7. ref: 显示索引的哪一列被使用.
 		8. rows: 大概需要读取的行数.
 		9. Extra: 额外信息.
-	当前项目的mysq架构:
+	当前项目的mysql架构:
 		三个数据源, 三个主从.
 		spring的RoutingDataSource进行切换数据源
 		sharding-jdbc进行分表.
 	读写分离: 使用主从复制架构
 	主从复制: 
-		原理: 主库将变更写binlog日志，然后从库连接到主库之后，从库有一个IO线程，将主库的binlog日志拷贝到自己本地，写入一个中继日志中,接着从库中有一个SQL线程会从中继日志读取binlog，然后执行binlog日志中的内容
+		原理: 主库将变更写binlog日志，然后从库连接到主库之后，从库有一个IO线程，将主库的binlog日志拷贝到relayLog，
+			写入一个中继日志中,接着从库中有一个SQL线程会从中继日志读取binlog，然后执行binlog日志中的内容
 		延时: 几十-几百毫秒.
-		半同步复制: 解决从库数据丢失问题, 主库写binlog时候, 会强制把数据同步到从库的relaylog, 收到从库的ack确认后才会任务写操作完成.
+		半同步复制: 解决从库数据丢失问题, 主库写binlog时候, 会强制把数据同步到从库的relayLog, 收到从库的ack确认后才会任务写操作完成.
 		并行复制: 解决主从同步延时, 从库开启多线程, 并行读取relaylog日志.
 	mysql主从同步延时问题:
 		对于需要强同步的, 就用半同步复制.
@@ -224,11 +241,13 @@ Sharding-JDBC:
 			4. snowflake算法: 64位ID, 1bit为0(正数), 41bit做毫秒数,10bit做工作机器id, 12bit做序列号.
 				snowflake算法问题: ???
 			5. 利用redis生成id: redisAtomicLong.incrementAndGet
-			6. 美团leaf分布式ID: https://tech.meituan.com/2017/04/21/mt-leaf.html 
+			6. 美团leaf分布式ID: https://tech.meituan.com/2017/04/21/mt-leaf.html
+				https://www.cnblogs.com/huangying2124/p/11736031.html
 		
 		
 使用场景及限制: 
 业务增加了只增加服务器不拆分可以吗? MySQL只换高性能的服务器可以吗?
+	不可以, 硬盘IO限制.
 MySQL连接为什么是2000
 
 数据库性能调优如何做
@@ -237,8 +256,6 @@ MySQL连接为什么是2000
 
 查询中哪些情况不会使用索引？
 数据库索引，底层是怎样实现的，为什么要用B树索引？
-
-Mysql主从同步的实现原理？
 
 MySQL是怎么用B+树？
 
@@ -255,16 +272,23 @@ MySQL是怎么用B+树？
 
 
 MYSQL 数据表在什么情况下容易损坏？
+	1. mysqld 进程在写表时被杀掉
+	2. 宕机
+	3. 损坏症状: sql执行不了. 打不开表
 
 说说自己对于 MySQL 常见的两种存储引擎：MyISAM与InnoDB的理解
 
 数据库索引了解吗？
 
-能说下MySQL 的基本存储结构吗？
 
 Mysql如何为表字段添加索引？
+	alter table `table_name` add primary key(`column`);
+	alter table `table_name` add index index_name(`column1`,`column2`,`column3`);
+
 
 对于大表的常见优化手段说一下
+	1. 读写分离, 分区
+	2. 索引限定数据的范围
 
 mysql 里记录货币用什么字段类型好
 
