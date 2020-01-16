@@ -12,14 +12,16 @@ JUC:
 	原子类:
 		操作的数据类型可分为四类:
 			基本类型:
-			数组类型:
 			引用类型:
+			数组类型:
 			对象属性修改类型:
 		AtomicInteger原理:
 			incrementAndGet:
 				1. 直接get当前的值(volatile的)
 				2. CAS + 自旋
 			get:    直接拿到value[volatile], 有可见性
+			AtomicInteger，为什么要用CAS而不是synchronized:
+                        	乐观锁代替悲观锁, 适合读多写少的情况.
 		AtomicLongArray原理:
 			incrementAndGet:
 			       1. 调用addAndGet(i,1)方法
@@ -60,9 +62,9 @@ JUC:
 				1. 校验key-value, 都不能为空
 				2. 插入操作, 空表就初始化
 				3. 要插入的index为空就cas插入
-				4. 如果正在扩容中, 就helpTransfer()[synchronized块锁node进行]
-				5. 如果是链表, 就遍历修改, 没有就放在最后.
-				6. 如果是树也修改和插入
+				4. 如果正在扩容中, 就helpTransfer()
+				5. 如果是链表, 就遍历修改, 没有就放在最后. [synchronized块锁node进行]
+				6. 如果是树也修改和插入 [synchronized块锁node进行]
 				7. 插入后判断要不要转红黑树.
 				8. 修改后判断要不要resize重哈希.
 			与HashMap对比各自优势:
@@ -202,7 +204,11 @@ JUC:
 			任务执行的过程中抛出异常: 设置成一种状态返回给主线程.
 		为什么要用线程池?:
 		线程池的好处:
+			1. 减少线程的创建开销
+			2. 控制并发数
+			3. 进行线程管理
 		使用时注意什么?
+			1. 核心线程数量, 等待队列的配置, 不要发生任务提交后长时间没有执行
 		核心线程数和最大线程数设置成多少?https://mp.weixin.qq.com/s/tV48ZCwZUAUO-1xL7uESUA
 			1. IO密集: 最佳线程数目=（（线程等待时间+线程 CPU 时间）/线程 CPU 时间 ）* CPU 数目。
 			2. cpu密集: 尽量少, cpu数+1
@@ -214,8 +220,12 @@ JUC:
 		不剥夺条件: 资源在未使用完毕之前不释放, tryLock破坏了不剥夺条件
 		循环等待条件: 必然存在一个进程等待队列形成循环等待.
 
-讲一讲AtomicInteger，为什么要用CAS而不是synchronized？
-	乐观锁代替悲观锁, 适合读多写少的情况.
+	自旋锁实现:
+
+
+
+
+
 
 线程和进程的区别
 

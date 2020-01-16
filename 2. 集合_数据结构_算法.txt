@@ -49,7 +49,11 @@ Collection:
                                 并发的HashMap为什么会引起死循环？:https://blog.csdn.net/zhuqiuhui/article/details/51849692
                                 HashMap多线程操作导致死循环问题: JDK1.7及以下: 声明两对指针，维护两个链表，依次在末端添加新的元素 解决.
 			WeakHashMap:
-			TreeMap: 顺序是Key的自然顺序
+			TreeMap: 顺序是Key的自然顺序, 必须实现Comparable接口.
+			LinkedHashMap:
+				记住插入元素的顺序，put和get都会把位置挪到最后
+			EnumMap:
+				key是枚哪些是同步容器,哪些是并发容器举, 存指定类型枚举作为key的obj. value可以存null(包装成obj)
 		哪些是同步容器,哪些是并发容器:
 			同步容器: vector, stack, hashTable: 全是synchronized方法
 			并发容器:
