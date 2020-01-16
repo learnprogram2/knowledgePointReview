@@ -5,7 +5,10 @@
 		服务拆分: 系统拆多服务, 要拆很多轮. 先拆出schedule, 再拆出promotion. 再拆
 			多轮拆. 一个主负责人负责一个服务.
 		为什么用dubbo: dubbo只是一个RPC架构, 还有springcloud.
-		为什么不用springCloud: ??????
+		为什么不用springCloud:
+			1. Spring Cloud来源于Spring，质量、稳定性、持续性都可以得到保证
+			2. cloud发展快.
+			3. 而且生态化.
 	分布式服务框架: 
 	分布式服务接口请求顺序性:
 		1. hash分发, 把要保证数据的请求分发到同一个provider/队列/线程中.
@@ -51,7 +54,7 @@
 	分布式锁: https://www.jianshu.com/p/8bddd381de06
 		分布式锁是什么: ??
 		redis: 
-			拿锁: set nx, 拿锁失败后不断地尝试拿锁.
+			拿锁: set ex(过期时间) nx(不在时才操作), 拿锁失败后不断地尝试拿锁.
 			解锁: lua脚本解自己的锁.
 			redlock算法: 获取当前时间戳, 为所有的master上锁, 如果超过一半就上锁成功, 否则失败, 失败后依次为每一个master解锁.
 		zookeeper: 
@@ -115,14 +118,15 @@ Dubbo:
 			1. 使用proto编译器, 自动进行序列化和反序列化.
 			2. 数据压缩效果好
 
-		通信框架:
-			netty: 默认
+	通信框架:
+		netty: 默认
 
 	负载均衡策略:
 		random loadbalance: 默认的随机, 根据权重随机配比.
 		roundrobin loadbalance: 轮询. 也可以调整权重
 		leastactive loadbalance: 某个机器性能越差，那么接收的请求越少
 		consistanthash loadbalance: 一致性hash, 相同参数的请求一定分发到一个provider上去
+
 	集群容错策略:
 		failover cluster模式: 默认, 失败自动切换，自动重试其他机器
 		failfast cluster模式: 一次调用失败就立即失败，常见于写操作
@@ -131,8 +135,9 @@ Dubbo:
 		forking cluster: 并行调用多个provider，只要一个成功就立即返回
 		broadcacst cluster: 逐个调用所有的provider
 
-	Dubbo 动态代理策略: 
-	服务注册, 消费者发现:
+	Dubbo 动态代理策略:???
+
+	服务注册, 消费者发现:???
 
 	SPI思想: 例子:JDBC接口
 		ExtensionLoader.getExtension.
@@ -143,6 +148,7 @@ Dubbo:
 		服务降级:
 		失败重试:
 		超时重试:
+
 	zookeeper宕机与dubbo直连的情况: 
 
 
