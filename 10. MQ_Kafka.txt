@@ -107,6 +107,11 @@ Kafka:
 
 
 
+	Kafka容错性:
+		https://www.cnblogs.com/qingyunzong/p/9004703.html#_label1
+
+
+
 使用场景及限制:
 
 kafka 原理和容错

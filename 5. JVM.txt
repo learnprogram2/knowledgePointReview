@@ -209,6 +209,7 @@ JVM:
 			2. 计划好List的容量.
 			3. 分散对象创建或删除的时间
 			4. 少使用静态对象变量
+		什么时候会出现内存溢出: TODO
 	JVM哪些参数: https://segmentfault.com/a/1190000010603813
 		1. 堆内存相关: 
 			1. 显式指定初始化堆内存大小–Xms和-Xmx
@@ -242,7 +243,7 @@ JVM:
                         1. Quartz定时任务内存泄漏: The web application [/project] appears to have started a thread named [SchedulerFactoryBean-Worker-1] but has faild to stop it
                                 原因: 系统在关闭时没有给Quartz时间来停止它所创建的定时任务，导致线程未被停止系统便已经关闭了。
                                 解决: 配置QuartzContextListener实现ServletContextListener，并在ContextDestroyed时执行SchedulerFactoryBean的shutdown方法
-                        2. 线程未关闭异常:
+                        2. HTTP线程未关闭异常:
                                 原因: httpAsyncClient客户端在请求失败的情况下，httpclient.close()此处会导致主线程阻塞，
                                         经源码发现close方法内部，在线程连接池关闭以后,
                                         httpAsyncClient对应线程还处于运行之中，一直阻塞在epollWait

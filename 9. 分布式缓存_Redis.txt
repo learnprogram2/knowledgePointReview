@@ -11,14 +11,15 @@
 		cacheAsidePattern: 更新RDS&删除redis, 查询rDS更新redis.
 		先删缓存, 然后更新数据库, 防止更新数据库后删除缓存失败后不一致.
 		高并发修改库存问题: 丢失数量.
-			把对key的读写路由到内存队列中, 通过后台线程更新内存队列, 然后返回数据. 并行化.
+			把对key的读写路由到*内存队列*中, 通过后台线程更新内存队列, 然后返回数据. 并行化.
 	什么情况会出现雪崩，以及如何应对？
 	雪崩如何解决: 缓存挂了, 所有请求落在mysql, 导致mysql宕机.
-		事前: redisCluster.
+		事前: redisCluster.哈希一致性, 同一个slot多个持有.
 		事中: ehcache + hystrix限流组件.
 		事后: redis持久化机制, 恢复缓存数据.
 	缓存穿透如何解决: 
 		缓存空值. 限制返回false
+		提前存储可查询名单:
 		布隆过滤器: ???https://github.com/Snailclimb/JavaGuide/blob/master/docs/dataStructures-algorithms/data-structure/bloom-filter.md
 	设计分布式缓存:??
 Radis:
@@ -75,15 +76,17 @@ Radis:
 		定期删除: Redis周期性执行serverCron函数时候, 会随机检查一部分key.
 		惰性删除: 每次读写命令时候, 懒惰的检查一下
 		过期淘汰机制: 内存占用过多, 会进行内存淘汰.
-			1. noeviction模式:内存不足以写入新数据, 新写入操作会报错.
-			2. allkeys-lru: 内存不足,移除最近最少使用的key(常用
-			3. allkeys-random: 随机删除
-			4. volatile-lru:内存不足, 在有过期时间的key中,移除最近最少使用的key.
-			5. volatile-random:内存不足,在设置过期时间的key中随即删除.
-			6. volatile-ttl: 内存不足, 在设置过期时间的key中优先移除最快过期key.
+			1. 不写入报错: noeviction模式:内存不足以写入新数据, 新写入操作会报错.
+			2. 删除原有数据:
+				1. allkeys-lru: 内存不足,移除最近最少使用的key(常用
+				2. allkeys-random: 随机删除
+			3. 删除过期key:
+				1. volatile-lru:内存不足, 在有过期时间的key中,移除最近最少使用的key.
+				2. volatile-random:内存不足,在设置过期时间的key中随即删除.
+				3. volatile-ttl: 内存不足, 在设置过期时间的key中优先移除最快过期key.
 	redis 持久化机制: 
 		AOF(appendOnlyFile): 每条写入命令作为日志
-			追加-文件写入-文件同步: 每执行写命令就放到啊缓冲区, 时间loop会读出缓冲区
+			追加-文件写入-文件同步: 每执行写命令就放啊缓冲区, 时间loop会读出缓冲区
 			AOF可以更好的保护数据不丢失，一般AOF会每隔1秒
 			AOF-rewrite: 基于redis当前内存中的数据构造一个小AOF
 			但: 文件大,恢复慢. 不适合冷备份.

@@ -57,6 +57,8 @@
 			拿锁: set ex(过期时间) nx(不在时才操作), 拿锁失败后不断地尝试拿锁.
 			解锁: lua脚本解自己的锁.
 			redlock算法: 获取当前时间戳, 为所有的master上锁, 如果超过一半就上锁成功, 否则失败, 失败后依次为每一个master解锁.
+			锁延时:
+				Redisson框架的watchDog会每隔10s查看一下是否需要延长.
 		zookeeper: 
 			拿锁: 注册临时节点, 拿锁失败后就注册监听器.
 				也可以用临时顺序节点, 解锁时候把下一个叫醒.
@@ -191,6 +193,7 @@ ZooKeeper:
 				统计是否有过半机器收到相同的投票信息. 过半即选出leader
 			5. 改变服务器状态
                               确定了Leader, 所有的服务器更新自己的状态, Follower变更成FOLLWING, Leader变成LEADING.
+	脑裂问题: https://mp.weixin.qq.com/s/Lo-xnMGvEemkvCG843d9eg
 
 
 

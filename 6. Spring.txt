@@ -77,6 +77,9 @@ Spring:
 	Bean是线程安全的吗:
 		Spring框架并没有对单例bean进行任何多线程的封装处理。
 		关于单例bean的线程安全和并发问题需要开发者自行去搞定。
+	循环依赖问题:
+		ApplicationContext的属性SetsingletonsCurrentlyInCreation来保存的，而半成品的A对象则是通过MapsingletonFactories来保存的
+		getSingleton()方法的作用是尝试从缓存中获取目标对象，如果没有获取到，则尝试获取半成品的目标对象；
 	注入javaCollection:
 		集合类的配置元素: list, set, map, props.
 
