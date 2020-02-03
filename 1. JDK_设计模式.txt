@@ -10,20 +10,35 @@ JDK:
 			-Error: 严重错误运行时为JVM出现问题, 对于所有的编译时期的错误以及系统错误都是通过Error抛出的
 				-VirtualMachineError    -OutOfMemoryError
 
+	抽象类和接口的区别:
+		1. 抽象类被子类唯一继承, 接口被实现类实现.
+		2. 抽象类包含方法声明和方法实现, 接口只做方法声明(和静态方法实现)
+		3. 抽象类的变量是普通变量, 接口时公共的静态变量
+		4. 抽象类是重构的结果, 抽象的类别, 接口是设计的结果, 抽象的功能.
 
 	重载和重写有什么区别，分别用什么关键字；
 		Override: 重写, 子类中和父类一样的方法签名(方法名+参数列表)
 		Overload: 重载, 同一个类中出现方法名相同参数列表不同.
+
 	Object类有哪些方法?: 
-		1. hash&equals方法:
+		1. 对比:hash&equals方法:
 			为什么重写equals时必须重写hashCode方法: 编程约定: 对象根据equals方式比较, 两个相同对象hashCode必须相同.
-		2. wait(), notify(): 等待当前对象的锁. 唤醒等待的线程.
-		3. clone(): 对象的浅复制.只有实现了Cloneable接口才可以调用该方法.
-		4. finalize():
-		4. toString(): 默认className+hashCode, 要重写
-		5. getClass(): final的native方法, 获得运行时类型
-	Java反射: 是在运行状态中, 对于任意一个类，都能够拿到并调用所有属性和方法的动态获取信息的功能.
-		运行时操作class对象.
+		2. 锁: wait(), notify(): 等待当前对象的锁. 唤醒等待的线程.
+		3. 生命周期
+			clone(): 对象的浅复制.只有实现了Cloneable接口才可以调用该方法.
+			toString(): 默认className+hashCode, 要重写
+			finalize(): 垃圾收集器准备好释放对象占用的存储空间，它首先调用finalize()，而且只有在下一次垃圾收集过程中，才会真正回收对象的内存.
+		5. 反射: getClass(): final的native方法, 获得运行时类型
+
+	Java反射: 是在运行状态中, 对于任意一个类，都能够拿到并调用所有属性和方法的动态获取信息的功能.运行时操作class对象.
+
+	Class.forName和classloader的区别:
+		1. 都可以对类进行加载
+		2. classloader遵循双亲委派模型最终调用启动类加载器的类加载器. 默认不初始化.
+			只将.class文件加载到jvm中，不会执行static中的内容，只有在newInstance才会去执行static块
+		3. Class.forName()方法实际上也是使用本地方法forName0调用的CLassLoader来实现的, 默认是需要初始化.
+			除了将类的.class文件加载到jvm中之外，还会对类进行解释，执行类中的static块.
+
 	Java注解: Java5引入的用来为程序元素(类/方法/成员变量)添加元数据的注释机制.
 		元注解: 修饰注解的注解, 如@Target,@Retention(生命周期),@Inherited(是否继承)
 		用处:
@@ -62,7 +77,7 @@ JDK:
 			命令模式: 命令模式有关机命令和开机命令.
 			观察者模式: 最常用的是订阅发布系统，使观察者和被观察者之间解耦，使UI层与具体事务解耦.
 		策略模式: 不同的方法完成
-		代理模式、观察者模式、（抽象）工厂模式: 
+		代理模式、观察者模式、(抽象)工厂模式:
 
 	Java如何实现线程安全:
 		互斥同步: Synchronized, Lock
