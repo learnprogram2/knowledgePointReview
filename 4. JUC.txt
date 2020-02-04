@@ -40,8 +40,12 @@ JUC:
 	        AQS: http://www.cnblogs.com/waterystone/p/4920797.html
 	                锁的底层支持, FIFO的双向队列, state可用记录锁次数所有线程cas该值拿锁, 等待线程存成Node
 	        Condition:条件队列,用 signal和await做锁的传声筒, 相当于Synchronized的wait()notify(),
-	        ReentrantLock:独占锁,state表示重入次数, CAS拿Sync的锁(AQS的state), 公平/竞争. ConditionObject.
-	        ReadLock/WriteLock/ReadWriteLock: 维系读&写两个锁, 公用Sync(AQS), 分别拿独占锁共享锁.
+	        ReentrantLock:
+	                独占锁,state表示重入次数, CAS拿Sync的锁(AQS的state), 公平/竞争. ConditionObject.
+	        ReadLock/WriteLock/ReadWriteLock:
+	                维系读&写两个锁, 公用Sync(AQS), 分别拿独占锁共享锁.
+	                读: ??
+	                写: ??
 	        StampedLock: 三种模式:悲观读&乐观读&写锁(不可重入), 不支持Condition
 
 	并发集合:
@@ -67,6 +71,14 @@ JUC:
 				6. 如果是树也修改和插入 [synchronized块锁node进行]
 				7. 插入后判断要不要转红黑树.
 				8. 修改后判断要不要resize重哈希.
+			扩容:
+				1. sizeCtl属性多线程之间查询, 判断ConcurrentHashMap的状态
+					sizeCtl < 0 : 表示有其他线程正在执行扩容
+				2. transferIndex扩容索引，表示已经分配给扩容线程的table数组索引位置
+					扩容线程，在迁移数据之前，首先要将transferIndex右移
+				3. 迁移完毕的hash桶,会被设置成ForwardingNode节点，以此告知访问此桶的其他线程，此节点已经迁移完毕。
+					put或remove访问到ForwardingNode节点, 先帮其扩容, 分配transferIndex.
+					get访问到调用ForwardingNode的find方法，去nextTable里面查找相关元素
 			与HashMap对比各自优势:
 
 	        Queue - Deque: 队列和双向队列
