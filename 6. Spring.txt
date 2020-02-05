@@ -8,45 +8,7 @@ Spring:
 		5. Spring Context 提供了关于UI支持,邮件支持等
 		6. Spring Web 提供了web的一些工具类的支持
 		7. Spring MVC 提供了web mvc , webviews , jsp ,pdf ,export
-	AOP: https://blog.csdn.net/qq_26323323/article/details/81012855
-		如事务管理、安全检查、缓存、对象池管理等。
-		Spring-AOP运行时增强，而AspectJ是编译时增强, SpringAOP使用了AspectJ的Annotation。定义切面, 使用Pointcut来定义切入点, 定义增强处理, 并没有使用它的编译器和织入器.
-		实现原理是JDK 动态代理，在运行时生成代理类。
-		1. 启用 Spring 对 @AspectJ 方面配置的支持: 添加配置: <aop:aspectj-autoproxy/> 
-			对应: AopNamespaceHandler, 会为aspectj-autoproxy标签注册AspectJAutoProxyBeanDefinitionParser.
-		2. AspectJAutoProxyBeanDefinitionParser: 
-			注册AnnotationAwareAspectJAutoProxyCreator(BeanPostProcessor)注册到Spring容器中，把bean交给Spring去托管
-			AnnotationAwareAspectJAutoProxyCreator就是生成对象的代理类的相关功能
-				有 postProcessBeforeInitialization, postProcessAfterInitialization(会wrapIfNecessary)
-				在wrap中, 如果该类有advice则创建proxy, 
-		3. wrapIfNecessary()方法:
-			1. getAdvicesAndAdvisorsForBean 通过class的解析拿到增强, 如果有增强, 就createProxy(bean.class, beanName, specificInterceptors)
-			2. createProxy: 
-				1. 创建proxyFactory，proxy的生产主要就是在proxyFactory做的
-				2. 将specificInterceptors重新封装为Advisor类，然后添加到ProxyFactory(ProxyCreatorSupport的实现)中
-				3. proxyFactory设置好target等, 调用proxyFactory.getProxy获取bean对应的proxy
-		4. ProxyFactory.getProxy: 创建JDK&CGlib代理的工厂哦~
-			1. 方法运行createAopProxy().getProxy(classLoader), 拿到AOP代理工厂, 拿代理.
-			2. createAopProxy()方法里面, 根据配置的Optimize, 代理的是接口/类来创建CglibAopProxy/JdkDynamicAopProxy
-				如果目标类是接口或者是代理类，则直接使用JDKproxy, 如果是类/Optimize就用CgLib
-			3. JdkDynamicAopProxy就正常的 Proxy.newProxyInstance(classLoader, proxiedInterfaces, this)
-		5. Invoke(): 
-			1. equals、hashCode等Object的方法就用
-			2. 获取当前bean被拦截方法链表
-			3. 如果为空, 则直接调用target的method, 不为空, 则逐一调用chain中的每一个拦截方法的proceed
-				invocation.proceed().
-		6. ProxyFactoryBean, 实现了FactoryBean, 与Spring IOC容器结合
-			1. getObject里面: initializeAdvisorChain(), 现根据增强器名字初始化增强器链条.
-			2. 根据单例代理还是原型代理, 做getSingletonInstance()或者newPrototypeInstance();
-			3. 最终都会 getProxy(createAopProxy());	
-	Spring的aop有哪些实现方式:
-		Spring 自动代理机制:
-			BeanNameAutoProxyCreator（基于Bean配置名规则的自动代理创建器）
-			DefaultAdvisorAutoProxyCreator（基于Advisor匹配机制的自动代理创建器):对容器中所有的Advisor进行扫描，自动将这些切面应用到匹配的Bean中（即为目标Bean创建代理实例)
-			AnnotationAwareAspectjAutoProxyCreator（基于Bean中AspectJ注解标签的自动代理创建器）
-		1. 利用代理模式动态的实现AOP: 继承advice(implements MethodBeforeAdvice)
-		2. 自定义类实现AOP: 编写aop配置文件<aop:config><aop:aspect之类的
-		3. 利用注解实现AOP: @Aspect, @Before, @after
+
 	IOC: https://javadoop.com/post/spring-ioc
 		控制反转是一种设计思想, 意味着将你设计好的对象交给容器控制，而不是传统的在你的对象内部直接控制。
 		DI: 依赖注入, IoC的一个重点是在系统运行中，动态的向某个对象提供它所需要的其他对象。
@@ -57,7 +19,17 @@ Spring:
 			byType: 按数据类型自动装配。如果一个bean的数据类型是用其它bean属性的数据类型，兼容并自动装配它。
 			constructor: 在构造函数参数的byType方式
 			autodetect: 如果找到默认的构造函数, 使用“自动装配用构造”; 否则使用“按类型自动装配”.
-	springboot和spring的区别: 
+		循环依赖问题:
+			解决循环依赖的方法就是保存所有创建的对象, 后面创建对象的时候有依赖的情况先去缓存中找一下,
+			找到了直接set到那个正在创建的对象的属性上, 没找到就创建一个新的对象给那个正在创建的对象, 并保存到缓存中.
+			缓存:
+				1. singletonObjects: 存储创建成功的单例.
+				2. singletonsCurrentlyInCreation: 创建中的bean的缓存
+				3. 如果是正在创建中，再看看earlySingletonObjects缓存中是不是存在, 找到了就返回
+				4. 如果还不存在且允许早期引用，就从singletonFactories缓存中寻找有没有创建这个Bean的工厂
+					如果找到了，就调用这个工厂的getObject()方法, 并把返回值加入到earlySingletonObjects中且把这个工厂移除，从而防止重复调用这个工厂，保证单例。
+
+
 	Spring Bean 的作用域: https://blog.csdn.net/weixin_33811539/article/details/92420106
 		1. singleton: IOC容器内只有一个实例. (默认)
 		2. prototype: 每次拿取都是新的
@@ -77,9 +49,48 @@ Spring:
 	Bean是线程安全的吗:
 		Spring框架并没有对单例bean进行任何多线程的封装处理。
 		关于单例bean的线程安全和并发问题需要开发者自行去搞定。
-	循环依赖问题:
-		ApplicationContext的属性SetSingletonsCurrentlyInCreation来保存的，而半成品的A对象则是通过MapSingletonFactories来保存的
-		getSingleton()方法的作用是尝试从缓存中获取目标对象，如果没有获取到，则尝试获取半成品的目标对象；
+
+	AOP: https://blog.csdn.net/qq_26323323/article/details/81012855
+		如事务管理、安全检查、缓存、对象池管理等。
+		Spring-AOP运行时增强，而AspectJ是编译时增强, SpringAOP使用了AspectJ的Annotation。定义切面, 使用Pointcut来定义切入点, 定义增强处理, 并没有使用它的编译器和织入器.
+		实现原理是JDK 动态代理，在运行时生成代理类。
+		1. 启用 Spring 对 @AspectJ 方面配置的支持: 添加配置: <aop:aspectj-autoproxy/>
+			对应: AopNamespaceHandler, 会为aspectj-autoproxy标签注册AspectJAutoProxyBeanDefinitionParser.
+		2. AspectJAutoProxyBeanDefinitionParser:
+			注册AnnotationAwareAspectJAutoProxyCreator(BeanPostProcessor)注册到Spring容器中，把bean交给Spring去托管
+			AnnotationAwareAspectJAutoProxyCreator就是生成对象的代理类的相关功能
+				有 postProcessBeforeInitialization, postProcessAfterInitialization(会wrapIfNecessary)
+				在wrap中, 如果该类有advice则创建proxy,
+		3. wrapIfNecessary()方法:
+			1. getAdvicesAndAdvisorsForBean 通过class的解析拿到增强, 如果有增强, 就createProxy(bean.class, beanName, specificInterceptors)
+			2. createProxy:
+				1. 创建proxyFactory，proxy的生产主要就是在proxyFactory做的
+				2. 将specificInterceptors重新封装为Advisor类，然后添加到ProxyFactory(ProxyCreatorSupport的实现)中
+				3. proxyFactory设置好target等, 调用proxyFactory.getProxy获取bean对应的proxy
+		4. ProxyFactory.getProxy: 创建JDK&CGlib代理的工厂哦~
+			1. 方法运行createAopProxy().getProxy(classLoader), 拿到AOP代理工厂, 拿代理.
+			2. createAopProxy()方法里面, 根据配置的Optimize, 代理的是接口/类来创建CglibAopProxy/JdkDynamicAopProxy
+				如果目标类是接口或者是代理类，则直接使用JDKproxy, 如果是类/Optimize就用CgLib
+			3. JdkDynamicAopProxy就正常的 Proxy.newProxyInstance(classLoader, proxiedInterfaces, this)
+		5. Invoke():
+			1. equals、hashCode等Object的方法就用
+			2. 获取当前bean被拦截方法链表
+			3. 如果为空, 则直接调用target的method, 不为空, 则逐一调用chain中的每一个拦截方法的proceed
+				invocation.proceed().
+		6. ProxyFactoryBean, 实现了FactoryBean, 与Spring IOC容器结合
+			1. getObject里面: initializeAdvisorChain(), 现根据增强器名字初始化增强器链条.
+			2. 根据单例代理还是原型代理, 做getSingletonInstance()或者newPrototypeInstance();
+			3. 最终都会 getProxy(createAopProxy());
+	Spring的aop有哪些实现方式:
+		Spring 自动代理机制:
+			BeanNameAutoProxyCreator（基于Bean配置名规则的自动代理创建器）
+			DefaultAdvisorAutoProxyCreator（基于Advisor匹配机制的自动代理创建器):对容器中所有的Advisor进行扫描，自动将这些切面应用到匹配的Bean中（即为目标Bean创建代理实例)
+			AnnotationAwareAspectjAutoProxyCreator（基于Bean中AspectJ注解标签的自动代理创建器）
+		1. 利用代理模式动态的实现AOP: 继承advice(implements MethodBeforeAdvice)
+		2. 自定义类实现AOP: 编写aop配置文件<aop:config><aop:aspect之类的
+		3. 利用注解实现AOP: @Aspect, @Before, @after
+
+
 	注入javaCollection:
 		集合类的配置元素: list, set, map, props.
 
@@ -93,9 +104,16 @@ Spring:
 		装饰者模式: Spring 中用到的包装器模式在类名上含有 Wrapper或者 Decorator
 
 	Spring中事件:
-		1. 上下文更新时间, 上下文关闭事件
-		2. 上下文开始事件, 上下文停止事件
-		3. 请求处理事件
+		ApplicationEvent：容器事件，必须由ApplicationContext发布
+			1. 上下文更新时间, 上下文关闭事件
+                        2. 上下文开始事件, 上下文停止事件
+                        3. 请求处理事件
+                ApplicationListener：监听器，可由容器中的任何监听器Bean担任
+		原理: ApplicationContext实现了
+			1.编写ApplicationEvent类的子类，这就是我们的事件类
+                        2.编写监听器类, 这个类要实现ApplicationListener接口
+                        3 将监听器配置在Spring的容器中
+                        4.调用ApplicationContext的publishEvent()方法来主动触发一个容器事件，或者spring的一些内置事件发生
 
 	Spring 事务
 		隔离级别:  TransactionDefinition 接口 ?????????
@@ -121,6 +139,15 @@ Spring:
 		4. ViewResolver视图解析器解析视图拿到View对象.
 		5. jsp/freemarker渲染视图.
 
+
+springboot和spring的区别:
+SpringBoot
+	启动原理: https://mp.weixin.qq.com/s/tLvaArDtQpRiWv4qhrUtUw
+		@EnableAutoConfiguration也是借助@Import的帮助，将所有符合自动配置条件的bean定义加载到IoC容器
+		@EnableAutoConfiguration会根据类路径中的jar依赖为项目进行自动配置，如：添加了spring-boot-starter-web依赖，会自动添加Tomcat和Spring MVC的依赖，Spring Boot会对Tomcat和Spring MVC进行自动配置。
+
+
+
 使用场景及限制:
 
 
@@ -132,4 +159,9 @@ spring 一个bean装配的过程？
 AOP 和 IOC 的原理？
 
 aop 原理
+
+
+
+
+
 
