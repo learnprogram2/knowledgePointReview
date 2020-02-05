@@ -201,6 +201,9 @@ JUC:
 			丢弃最老任务:
 			抛出异常: 默认
 			调用者自己处理:
+		shutdown和shutdownNow区别:
+			shutdown: 接着做完剩下的工作, 正常结束
+			shutdownNow: 停止所有工作不做了.
 		线程池状态: 和线程数量共同保存在ctl里, 位运算.
 			RUNNING: 可接受新任务, 可执行队列中的任务.
 			SHUTDOWN: 不接受新任务, 可执行队列中的任务. 执行shutdown()方法
