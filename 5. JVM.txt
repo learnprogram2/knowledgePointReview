@@ -23,10 +23,10 @@ JVM:
 									否: CAS操作替换threadID. -[替换成功吗]	是: 获得偏向锁执行同步代码块
 														否: 开始撤销偏向锁(竞争出现才释放锁), 持有偏向锁的线程到达安全点并暂停.	-[持有偏向锁的线程是否完成同步代码块]	是: 原持有的线程释放偏向锁, 接着开始抢偏向锁咯
 																										否: 升级为轻量级锁!.原偏向锁线程栈内分配锁记录, 拷贝对象头的markworld到锁记录. 原来的偏向锁线程拿到轻量级锁接着从安全点执行. 抢的线程就[抢轻量级锁]
-				轻量级锁: [抢轻量级锁], 在当前线程中分配锁记录, 拷贝markWrold到锁记录, CAS操作把对象markWorld指向本线程,-[是否成功?]	成功:	获得轻量级锁, 执行同步代码块. 执行完后解锁. -[CAS对比对象markWorkd是否与栈内一致, 是否指向本线程]	CAS一致: 释放锁成功.
+				轻量级锁: [抢轻量级锁], 在当前线程中分配锁记录, 拷贝markWorld到锁记录, CAS操作把对象markWorld指向本线程,-[是否成功?]	成功:	获得轻量级锁, 执行同步代码块. 执行完后解锁. -[CAS对比对象markWorld是否与栈内一致, 是否指向本线程]	CAS一致: 释放锁成功.
 																													CAS不一致: 说明升级锁了, 释放锁, 唤醒被挂起的线程, 让他们新竞争锁.
 																	失败:	自旋修改哦, -[自选修改是否成功]	成功: 获得轻量级锁...
-																						失败: 升级重量级锁, 修改markWrold, 挂起当前线程. 等着轻量级锁线程执行完, 叫起自己.
+																						失败: 升级重量级锁, 修改markWorld, 挂起当前线程. 等着轻量级锁线程执行完, 叫起自己.
 				重量级锁: mutex挂起当前线程, 等着被叫起来.
 		和ReentrantLock的区别:	1. 都是可重入锁
 					2. synchronized依赖于jvm, reentrantLock依赖于API.
@@ -42,11 +42,11 @@ JVM:
 				4. 哪些程序代码会被编译成本地代码, 如何编译本地代码?
 				5. 如何从外部观察JIT的编译过程和结果
 		运行时优化:
-			1. 数组边界清楚检查
-			2. 方法内联
+			1. 方法内联
+			2. 逃逸分析, 栈上分配.
 			3. 解释器与编译器配合
 			4. 公共表达式消除
-			5. 逃逸分析, 栈上分配.
+			5. 数组边界清楚检查
 	Java对象内存布局: https://www.jianshu.com/p/91e398d5d17c java内存模型
 		对象头:	markWorld: 一系列的标记位，比如轻量级锁的标记位，偏向锁标记位等等。在32位系统占4字节，在64位系统中占8字节；
 			classPointer: 指向对象对应的Class对象的内存地址, 在32位系统占4字节，在64位系统中占8字节
@@ -86,11 +86,13 @@ JVM:
 		6. 字段表集合: u2字段个数, file_info[].
 		7. 方法表: 
 		8. 属性表: u2属性数, attribute_info[], Class 文件，字段表，方法表中都可以携带自己的属性表集合，以用于描述某些场景专有的信息
-	Java内存区域: 
+	Java内存区域:  https://mmbiz.qpic.cn/mmbiz_png/OyweysCSeLUrYqPicjVwjuMChPrPicNHdXXLVjV6CEdDmdicIfdEczgIFd29kNNjhRkGGHLWogaTWEiazsQVibgl9kg/640?wx_fmt=png&tp=webp&wxfrom=5&wx_lazy=1&wx_co=1
 		方法区(1.6及之前): 包含运行时常量池.
 		元空间: 线程共享, 类信息、常量、静态变量、即时编译器编译后的代码等数据。JVM规范把方法区描述为堆的一个逻辑部分.
 		堆: 线程共享, 存放对象实例，几乎所有的对象实例以及数组都在这里分配内存。垃圾收集器管理的主要区域.
-			新生代: 
+			新生代:
+				新生代为啥要设置成 Eden, S0,S1 这三个区:
+
 			老年代: 
 			永久代: (1.7)
 			元空间: (1.8),代替方法区, 也代替了永久代.
@@ -99,7 +101,8 @@ JVM:
 			StackOverFlowError 和 OutOfMemoryError, return返回/throw返回
 			方法的符号引用在解析阶段有一部分会变成动态链接. 在运行时候才会变成直接引用.
 		本地方法栈: 和虚拟机栈非常相似, 为虚拟机使用到的 Native 方法服务.
-		程序计数器: 线程私有, 当前线程所执行的字节码的行号指示器。分支、循环、跳转、异常处理、线程恢复等功能都需要依赖这个计数器来完成。不会OutOfMemoryError.
+		程序计数器: 线程私有, 当前线程所执行的字节码的行号指示器。分支、循环、跳转、异常处理、线程恢复等功能都需要依赖这个计数器来完成。
+			不会OutOfMemoryError.
 		永久代 (PermGen) 替换为元空间(MetaSpace): 永久代有一个 JVM 本身设置固定大小上限，无法进行调整，而元空间使用的是直接内存.
 			元空间里面存放的是类的元数据，这样加载多少类的元数据就不由 MaxPermSize控制.
 		直接内存: 直接内存并不是虚拟机运行时数据区的一部分，也不是虚拟机规范中定义的内存区域, 因为NIO可以直接使用 Native 函数库直接分配堆外内存.
@@ -120,6 +123,9 @@ JVM:
 			长期存过的对象进入老年代:
 			动态对象年龄判定: 虚拟机不是永远要求对象年龄必须达到了某个值才能进入老年代, Survivor 空间中相同年龄所有对象大小的总和大于 Survivor 空间的一半，
 				年龄大于或等于该年龄的对象就可以直接进入老年代，无需达到要求的年龄。
+			数组多大放在JVM 老年代
+                        	1. PretenureSizeThreshold参数可以配置对象直接在old区分配内存, 问通常多大
+                        	2. 年轻代放不下，直到放老年代
 	对象的访问定位的两种方式:
 		句柄: Java堆中划分出一块句柄池，reference中存储对象的句柄地址, 而句柄中包含了对象实例数据与类型数据各自的具体地址信息.
 		直接指针: reference 中存储的直接就是对象的地址。[只要使用 new 方法，便需要创建新的对象。]
@@ -137,7 +143,7 @@ JVM:
 	如何判断对象是否死亡: 
 		引用计数法: 为对象添加引用计数器, 为引用的数量. 实现简单高效, 但是无法解决循环引用的问题.
 		可达性分析算法: 通过一系列的称为 “GC Roots” 的对象作为起点开始向下搜索，走过的路径称为引用链, 当一个对象到GCRoots没有任何引用链证明此对象是不可用的。
-			GCRoot有: 虚拟机栈(栈帧中的本地变量表)中的引用的对象, 类静态属性引用的对象, 方法区钟常量引用的对象, native方法引用的对象
+			GCRoot有: 虚拟机栈(栈帧中的本地变量表)中的引用的对象, 类静态属性引用的对象, 方法区中常量引用的对象, native方法引用的对象
 		不可达的对象并非“非死不可”: 它们暂时处于“缓刑阶段”, 要经历两次标记过程.
 			1. 此对象是否有必要执行 finalize 方法。
 			2. 对象将会被放在一个队列中进行第二次标记, 这个对象与引用链上的任何一个对象建立关联，就不会回收。
@@ -157,7 +163,7 @@ JVM:
 		1. 该类所有的实例都已经被回收
 		2. 加载该类的 ClassLoader 已经被回收
 		3. 该类对应的 java.lang.Class 对象没有在任何地方被引用, 无法被反射.
-	GC: 
+	GC:  https://mp.weixin.qq.com/s/dMMf6XCshTqYtuqRPIL0vQ
 		线程运行到safePoint开始GC: safePoint是线程相对稳定的点.
 			抢先式中断: 先中断所有线程, 把没有到安全点的线程放走到下个安全点停止
 			主动式中断: GC通知线程, 该中断了啊, 等到所有线程中断后开始GC.
@@ -209,7 +215,22 @@ JVM:
 			2. 计划好List的容量.
 			3. 分散对象创建或删除的时间
 			4. 少使用静态对象变量
-		什么时候会出现内存溢出: TODO
+		什么时候会出现内存溢出:
+			1. 生成太多对象
+			2. 扩展栈时无法申请足够的内存空间
+		堆外内存不受GC控制, 怎么释放:
+			等到full GC的时候才能垃圾回收
+			https://www.jianshu.com/p/35cf0f348275
+		什么内存泄露:
+			1. 将没有hashCode（）和equals（）的对象添加到HashSet中
+			2. 不关stream
+			3. 创建大量无用的Obj, 静态字段保持大对象引用
+			4. 监听器任务没有被唤醒, 持有达量数据
+			1、静态集合类, 变量不合理的作用域, 内部类持有外部类
+			2、各种连接，如数据库连接、网络连接和IO连接等
+			3. 改变哈希值
+			4. array中不保证线程安全, 可能会残存引用
+
 	JVM哪些参数: https://segmentfault.com/a/1190000010603813
 		1. 堆内存相关: 
 			1. 显式指定初始化堆内存大小–Xms和-Xmx
@@ -234,7 +255,7 @@ JVM:
 		3. 实际:
 		        -Xms3g -Xmx3g JVM堆内存
                         -XX:PermSize=256M -XX:MaxPermSize=1024m 非堆内存
-                        -XX:NewSize=2048m -XX:MaxNewSize=2048m
+                        -XX:NewSize=2048m -XX:MaxNewSize=2048m 新生代.
                         -XX:SurvivorRatio=10 from 、to分别占Young Generation的空间的1/10，Eden占8/10;
                             NewRatio默认2, 新生代:老年1:2
 			调优:    1. -XX:NewSize, -XX:MaxNewSize 显示设置为
@@ -242,7 +263,7 @@ JVM:
 		4. OOM事件:
                         1. Quartz定时任务内存泄漏: The web application [/project] appears to have started a thread named [SchedulerFactoryBean-Worker-1] but has faild to stop it
                                 原因: 系统在关闭时没有给Quartz时间来停止它所创建的定时任务，导致线程未被停止系统便已经关闭了。
-                                解决: 配置QuartzContextListener实现ServletContextListener，并在ContextDestroyed时执行SchedulerFactoryBean的shutdown方法
+				解决: 配置QuartzContextListener实现ServletContextListener，并在ContextDestroyed时执行SchedulerFactoryBean的shutdown方法
                         2. HTTP线程未关闭异常:
                                 原因: httpAsyncClient客户端在请求失败的情况下，httpclient.close()此处会导致主线程阻塞，
                                         经源码发现close方法内部，在线程连接池关闭以后,
@@ -250,6 +271,10 @@ JVM:
                         3. 创建超大数组:
                                 原因: 定时任务项目跑数据, OOM
                                 解决: JVM调整新生代大小-Xmx, 并增加编码规则.
+                        4. 定时任务模块
+                5. 有遇到过内存泄漏吗？你们是怎么解决的:
+			每次定期任务间隔时间短，导致定期任务叠加执行，耗用大量系统资源。多个任务叠加在一起，老线程没运行完不释放资源
+			解决方法是：减少定时任务处理量, 增加间隔时间.
 	JVM 自带查看工具: 
 		JPS: 类似于ps命令, 查看所有java进程启动类, 传入参数和 Java 虚拟机参数等信息；
 		jstat: (JVM Statistics Monitoring Tool), 收集 HotSpot 虚拟机各方面的运行数据, 查看GC同济.
@@ -334,14 +359,17 @@ classLoader 机制
 
 synchronized 关键字的底层原理
 
-synchronized 关键字底层做了哪些优化-锁升级过程
 
 说说 synchronized 关键字和 volatile 关键字的区别
+
 内存模型以及分区，需要详细到每个区放什么。
 
 GC 收集器有哪些？CMS 收集器与 G1 收集器的特点。
 
 Minor GC 与 Full GC 分别在什么时候发生？
+	MinorGC: Eden区域满了, 或者新创建的对象大小>Eden所剩空间
+	FullGC: 先触发MinorGC
+		1. Minor GC后存活的对象晋升到老年代时晋升的对象的平均大小 > 老年代剩余空间
 
 堆里面的分区：Eden，survival （from+ to），老年代，各自的特点。
 
@@ -354,3 +382,12 @@ java 中垃圾收集的方法有哪些?
 简述 java 内存分配与回收策率以及 Minor GC 和Major GC
 
 
+介绍JVM中7个区域，然后把每个区域可能造成内存的溢出的情况说明
+
+
+jvm 如何分配直接内存， new 对象如何不分配在堆而是栈上，常量池解析
+如果想不被 GC 怎么办
+介绍GC 和GC Root不正常引用。
+数组多大放在JVM 老年代
+	1. PretenureSizeThreshold参数可以配置对象直接在old区分配内存, 问通常多大
+	2. 年轻代放不下，直到放老年代
