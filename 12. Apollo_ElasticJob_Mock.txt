@@ -6,7 +6,7 @@ Apollo: 统一管理不同环境、不同集群的配置
 		配置修改实时生效（热发布）
 		版本发布管理
 	架构: 
-		1. ConfgService: 提供配置获取接口, 配置更新推送接口(长轮询) , 接口服务对象为Apollo客户端
+		1. ConfigService: 提供配置获取接口, 配置更新推送接口(长轮询) , 接口服务对象为Apollo客户端
 		2. AdminService: 提供配置管理, 修改、发布接口
 		3. Client: 客户端程序，为应用提供配置获取、实时更新等功能, Client侧做load balance、错误重试
 			通过Meta Server获取Config Service服务列表（IP+Port），通过IP+Port访问服务

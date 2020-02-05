@@ -1,7 +1,14 @@
 11
 
 Linux:
-	主要Linux 命令: 
+	主要Linux 命令:
+		linux命令查询一个文件内出现重复最多的数字的
+			uniq -c file | sort -n -r |head -10 //查询一个文件重复最多的前10条记录
+                linux命令查询一个文件的行数
+                        wc -l filename // 多少行
+                        wc -w filename 看文件里有多少个word。
+                        wc -L filename 文件里最长的那一行是多少个字。
+                        wc命令的功能为统计指定文件中的字节数、字数、行数, 并将统计结果显示输出
 	理解网关，网关带来的好处和坏处: ??
 	查找磁盘上最大的文件的命令:
 	如何查看系统日志文件:
@@ -61,9 +68,6 @@ https://blog.csdn.net/Day_and_Night_2017/article/details/99693559
 
 性能优化案例，以及优化思路
 
-哪个项目让你收获最多，这个项目使用了哪些技术，挑战在哪里？
-
-工作中遇到的最大挫折是什么，说说得与失？
 
 最近有没有学习过新技术？
 
@@ -77,4 +81,22 @@ https://blog.csdn.net/Day_and_Night_2017/article/details/99693559
 假如服务器反应很慢，你应该怎么排查问题
 
 怎么跟踪一个方法的用时，并且最小限度干涉业务程序
+
+假设服务器经常宕机，你从哪些方面去排查问题？
+	1. jconsole监控
+	2. jmap,dump文件.
+	3. top-jstack监控线程.
+
+
+
+https://mp.weixin.qq.com/s/wVFPcbbIIfhjvIztXhTz3A
+
+
+
+
+
+
+
+
+
 
