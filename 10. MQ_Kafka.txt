@@ -75,11 +75,13 @@ Kafka:
 		无论是如何消费，一个组必须且一定会消费完全部的partition
 		一个组必须且一定会消费完全部的partition-最优的设计:consumer group下的consumer thread的数量等于partition数量
 	Consumer Rebalance的触发条件: Consumer/Broker 的变动会造成 ConsumerRebalance
-		Consumer的delivery gurarantee，默认是读完message先commmit再处理message, 可以把autocommit设为false.
+
+	Consumer的delivery gurarantee，默认是读完message先commmit再处理message, 可以把autocommit设为false.
 		1. low level api的partition offsite信息是consumer自己维护, high level api是zookeeper.
 			kakfa处理message是没有锁操作的, 使用low中间重启会重复丢失消息/自己处理逻辑, 使用hight会重复消费.
 		2. consumer负责维护消息的消费记录,而broker则不关心
-	Topic & Partition: 
+
+	Topic & Partition:
 		1. Topic相当于传统消息系统MQ中的一个队列queue
 		2. kafka会把Topic的message进行load balance, 均匀的分布在topic下的不同的partition.
 		3. 新增partition时, 原来的partition里面的message不会重新进行分配, 重新开始均匀分配新的消息.
@@ -94,7 +96,7 @@ Kafka:
 			1. 不管，发送出去就当作成功，不能保证消息成功投递到broker
 			2. Master-Slave模型，只有当Master和所有Slave都接收到消息时，才算投递成功
 			3. 只要Master确认收到消息就算投递成功(一般使用)
-		持久化: Kafka是顺序写入o（1）的时间复杂度，速度非常快
+		持久化: Kafka是顺序写入o(1)的时间复杂度，速度非常快
 		有效期: Kafka会长久保留其中的消息, 使用文件存储消息(append only log).暂时buffer起来再flush到磁盘
 		批量发送: 
 		同步异步：Producer采用异步push方式，极大提高Kafka系统的吞吐率
@@ -103,6 +105,7 @@ Kafka:
 			1. At most once消息可能会丢，绝对不会重复传输: 先保存offset再处理消息;
 			2. At least once 消息绝对不会丢，但是可能会重复传输: 先处理消息, 再保存offset.
 			3. Exactly once每条信息肯定会被传输一次且仅传输一次: 最少1次＋消费者的输出中额外增加已处理消息最大编号
+		kafka如何保证不丢消息又不会重复消费: todo
 	文件存储机制
 
 
