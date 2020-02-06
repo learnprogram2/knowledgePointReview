@@ -4,26 +4,30 @@
 		2. 高并发, 从200ms的接口到10ms的接口响应速度.
 	缓存带来的问题:
 		1. 缓存和数据库双写不一致:???
-		2. 缓存雪崩
+			cacheAsidePattern: 更新RDS&删除redis, 查询rDS更新redis.
+                        先删缓存, 然后更新数据库, 防止更新数据库后删除缓存失败后不一致.
+                        高并发修改库存问题: 丢失数量.
+				把对key的读写路由到*内存队列*中, 通过后台线程更新内存队列, 然后返回数据. 并行化.
+		2. 缓存雪崩: 缓存挂了, 所有请求落在mysql, 导致mysql宕机
+			事前: redisCluster.哈希一致性, 同一个slot多个持有.
+                        事中: ehcache + hystrix限流组件.
+                        事后: redis持久化机制, 恢复缓存数据.
 		3. 缓存穿透
-	缓存和数据库数据不一致:????
-	保证缓存与数据库双写时的数据一致性: 
-		cacheAsidePattern: 更新RDS&删除redis, 查询rDS更新redis.
-		先删缓存, 然后更新数据库, 防止更新数据库后删除缓存失败后不一致.
-		高并发修改库存问题: 丢失数量.
-			把对key的读写路由到*内存队列*中, 通过后台线程更新内存队列, 然后返回数据. 并行化.
-	什么情况会出现雪崩，以及如何应对？
-	雪崩如何解决: 缓存挂了, 所有请求落在mysql, 导致mysql宕机.
-		事前: redisCluster.哈希一致性, 同一个slot多个持有.
-		事中: ehcache + hystrix限流组件.
-		事后: redis持久化机制, 恢复缓存数据.
-	缓存穿透如何解决: 
-		缓存空值. 限制返回false
-		提前存储可查询名单:
-		布隆过滤器: ???https://github.com/Snailclimb/JavaGuide/blob/master/docs/dataStructures-algorithms/data-structure/bloom-filter.md
-	设计分布式缓存:??
-Radis:
-	当前项目的redis架构: ?
+			缓存空值. 限制返回false
+                        提前存储可查询名单:
+                                布隆过滤器: ???https://github.com/Snailclimb/JavaGuide/blob/master/docs/dataStructures-algorithms/data-structure/bloom-filter.md
+	设计分布式缓存:
+		缓存算法:
+			FIFO: 队列, 按照放入顺序将各数据链接起来组成队列
+			LRU: (The Least Recently Used, 最近最久未使用算法):
+				1. 双向链表（LinkedList）+哈希表（HashMap）实现（链表用来表示位置，哈希表用来存储和查找）
+				2. Redis中使用.
+			LFU: (Least Frequently Used, 最近最少使用算法)
+				一个数据在最近一段时间很少被访问到，那么可以认为在将来它被访问的可能性也很小。
+				因此，当空间满时，最小频率访问的数据最先被淘汰
+				实现策略为小顶堆+哈希表.
+Redis:
+	当前项目的redis架构:
 		redis版本: 3.07:497实例, 3.2:76实例
 		redis cluster: 开发: 3主3从, 生产:10主10从
 		redis sentinel: 三主三从.
@@ -46,22 +50,29 @@ Radis:
 			单线程避免了多线程的上下文切换问题
 	redis 常见数据结构, 实现以及使用场景分析: ??? 
 		数据结构:
-			string: 构建了SDS的抽象类型. 记录了字符串长度, 内存预分配, 不会缓冲区溢出. 兼容C字符串.
-			list: 有序列表. list+listNode, 双向链表. 缓存粉丝list.
-			hash: k-v的map, 缓存信息. 
+			string:
+				构建了SDS的抽象类型. 记录了字符串长度, 内存预分配, 不会缓冲区溢出. 兼容C字符串.
+			list: (2^32-1个)
+				有序列表. list+listNode, 双向链表. 缓存粉丝list.
+			hash:
+				k-v的map, 缓存信息.
 			-字典: 维护两个哈希表, 用于rehash, 可用渐进式rehash, 字典同时持有两个hash, 增删改都做一遍.
 			-跳跃表: 双向链表, 每个节点维持多个层存指向其他节点的指针.
 			整数集合: struct只包含整数, 个数, 编码(类型). 
 			压缩列表: 列表键和hash的底层实现之一. 特殊编码的连续内存组成的顺序性数据结构.存储任意多个节点.
 		对象: 键对象, 值对象, 编码.
-			键对象: 字符串对象, 值对象可以是任意一种.
-			字符串: 值对象的编码是: int, raw, embstr.
-			list: 值对象编码是zipList跳跃表, linkedList链表.
+			键对象: (2^32-1个)
+				字符串对象, 值对象可以是任意一种.
+			字符串: (512MB)
+				值对象的编码是: int, raw, embstr.
+			list: (2^32-1个)
+				值对象编码是zipList跳跃表, linkedList链表.
 			hash: hashTable/zipList
 			set: 无序集合, intset和hashtable(存在key,value为null), 去重.
 			sorted-set: 字典和跳跃表, 放进元素时指定分数, 有序集合
 		内存回收: redis对象系统中构建了引用计数(reference counting)技术实现的内存回收机制.
 			redisObject钟有refCount属性. 还可以显示对象是否在共享中.
+
 	redis数据库:
 		redisServer: 维系所有的数据库
 			1. 命令执行过程: 事件处理器读取命令请求, 查找命令实现. 进行准备操作(权限/等), 调用命令实现函数
@@ -70,7 +81,9 @@ Radis:
 				更新服务器时间缓存更新lru时钟, 管理客户资源, 执行AOF.
 		redisClient: redisDb属性存着当前用的数据库.
 			输入/出缓冲区. 载入AOF文件时, 创建执行AOF的伪客户端.
-		redisDb: dic属性存着所有键值对. 
+		redisDb: dic属性存着所有键值对.
+	redis 内存管理: ??
+
 	redis 过期: redisDB结构的expires字段保存了所有键的过期时间.
 	redis 内存淘汰机制: 如果过期key没有被定期删除删除掉, 就要用过期淘汰机制.
 		定期删除: Redis周期性执行serverCron函数时候, 会随机检查一部分key.
@@ -154,7 +167,11 @@ Radis:
 	redis 事务: MULTI, EXEC之间的命令放入队列缓存, 事务中任何命令执行失败, 其他命令依然执行.
 	如何解决 Redis 的并发竞争 Key 问题:  
 		分布式锁, 同一时间只有一个系统在操作redis-key. 加入时间戳防止乱序更新.
-
+	Redis分布式锁的缺点
+        	1. 简单的set可能导致无法解锁
+        		使用set get解决, 拿不到锁就get检查锁是否过期.
+        	2. 锁超时, 锁被其他线程拿走了
+        		watchDog自动续时.
 
 
 使用场景及限制:
@@ -178,12 +195,15 @@ MongoDB和Redis和 memcached适用哪些场景？
 集群中怎么控制session；
 
 
+游戏排名怎么实现，我说redis的zset，他说不用redis怎么实现，我就说使用跳表
 
 为什么要用 redis /为什么要用缓存？
 
 为什么要用 redis 而不用 map/guava 做缓存?
 
-Redis 分布式锁的缺点？
+
+怎么用redis实现分布式锁
+分布式锁，基于zookeeper实现和redis实现在性能上有什么差异？
 
 redis 常见数据结构以及使用场景分析
 
