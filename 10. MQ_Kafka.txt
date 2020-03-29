@@ -49,9 +49,9 @@ MQ:
 			写数据时候, 指定同一个key, 在分发消息时候会被分发到同一个partition中.
 			同时每个partition, 只指定一个消费者.
 			同一个消费者多线程, 可为多线程指定多个内存queue.
-	如何解决消息队列的延时以及过期失效问题？
+	如何解决消息队列的延时以及过期失效问题?
 		线上不允许设置失效时间, 过后可以跑批处理丢失订单.
-	消息队列满了以后该怎么处理？有几百万消息持续积压几小时，说说怎么解决？
+	消息队列满了以后该怎么处理？有几百万消息持续积压几小时, 说说怎么解决?
 		可以把消费者变成生产者, 部署更多的消费者, 加倍干活.
 	在consumer group 中新增一个consumer  会提高消费消息的速度吗、那如果我想提高消息消费的速度，我要怎么办:
 RabbitMQ:
@@ -60,10 +60,10 @@ RabbitMQ:
 
 
 Kafka: 
-	KakfaBrokerLeader的选举: 所有的Kafka Broker节点一起去Zookeeper上注册一个临时节点, 
+	KafkaBrokerLeader的选举: 所有的Kafka Broker节点一起去Zookeeper上注册一个临时节点,
 		只有一个KafkaBroker注册成功成为 KafkaBrokerController;
 		Controller在ZooKeeper注册Watch监听其他的Kafka Broker.
-	Broker宕机恢复:	Kafka动态维护了一个同步状态的副本的集合(a set of in-sync replicas), 简称ISR
+	Broker宕机恢复: Kafka动态维护了一个同步状态的副本的集合(a set of in-sync replicas), 简称ISR
 		controller通知zookeeper, 由zookeeper就通知其他的kafkaBroker.
 		controller会读取该宕机broker上所有的partition在zookeeper上的状态
 		并选取ISR列表中的一个replica作为partition leader(ISR列表是根据数据的完整程度设置的备份机子的队列，如果ISR列表中的replica全挂，选一个幸存的replica作为leader
@@ -75,6 +75,12 @@ Kafka:
 		无论是如何消费，一个组必须且一定会消费完全部的partition
 		一个组必须且一定会消费完全部的partition-最优的设计:consumer group下的consumer thread的数量等于partition数量
 	Consumer Rebalance的触发条件: Consumer/Broker 的变动会造成 ConsumerRebalance
+		1. 将目标 topic 下的所有 partirtion 排序，存于PT
+                2. 对某 consumer group 下所有 consumer 排序，存于 CG，第 i 个consumer 记为 Ci
+                3. N=size(PT)/size(CG)，向上取整
+                4. 解除 Ci 对原来分配的 partition 的消费权（i从0开始）
+                5. 将第i*N到（i+1）*N-1个 partition 分配给 Ci　　
+
 
 	Consumer的delivery gurarantee，默认是读完message先commmit再处理message, 可以把autocommit设为false.
 		1. low level api的partition offsite信息是consumer自己维护, high level api是zookeeper.

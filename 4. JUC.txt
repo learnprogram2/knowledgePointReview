@@ -20,7 +20,7 @@ JUC:
 				1. 直接get当前的值(volatile的)
 				2. CAS + 自旋
 			get:    直接拿到value[volatile], 有可见性
-			AtomicInteger，为什么要用CAS而不是synchronized:
+			AtomicInteger, 为什么要用CAS而不是synchronized:
                         	乐观锁代替悲观锁, 适合读多写少的情况.
 		AtomicLongArray原理:
 			incrementAndGet:
@@ -92,7 +92,7 @@ JUC:
 	        LinkedBlockingDeque:双向无界阻塞队列, 一个reentranLock控制, 两个条件变量同queue.
 	        PriorityBlockingQueue:带优先级的无界阻塞队列, 每次出队优先级最高的元素, 使用平衡二叉树堆实现. 一个lock控制出入队, notEmpty条件变量,
 
-	        Delayed: 延迟对象, 混合风格的接口，用来标记那些应该在给定延迟时间之后执行的对象
+	        Delayed: 延迟对象, 混合风格的接口, 用来标记那些应该在给定延迟时间之后执行的对象
 	        DelayedQueue: 延迟时间作为优先级的队列, 是一个PirorityQueue, 元素实现delayed接口. 一个ReentrantLock控制出入队,
 
 	        TransferQueue: 可以直接给消费者, 而不放在队列里. 查看等待的消费者个数. 生产者可以马上知道是否被消费的队列
@@ -146,7 +146,7 @@ JUC:
 
 	Callable与Runnable: https://blog.csdn.net/alex_hh/article/details/90481667
 		Runnable是一种有很大局限性的抽象, run方法不能返回结果或抛出受检查编译.
-		Callable是一种更好的抽象：它认为主入口点（即call()）将返回一个值，并可能抛出一个异常。
+		Callable是一种更好的抽象：它认为主入口点(即call())将返回一个值，并可能抛出一个异常。
 			与Future/FutureTask放在线程池中使用获取异步结果.
 
 	线程

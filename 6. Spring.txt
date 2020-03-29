@@ -26,7 +26,7 @@ Spring:
 				1. singletonObjects: 存储创建成功的单例.
 				2. singletonsCurrentlyInCreation: 创建中的bean的缓存
 				3. 如果是正在创建中，再看看earlySingletonObjects缓存中是不是存在, 找到了就返回
-				4. 如果还不存在且允许早期引用，就从singletonFactories缓存中寻找有没有创建这个Bean的工厂
+				4. 如果还不存在且允许早期引用, 就从singletonFactories缓存中寻找有没有创建这个Bean的工厂
 					如果找到了，就调用这个工厂的getObject()方法, 并把返回值加入到earlySingletonObjects中且把这个工厂移除，从而防止重复调用这个工厂，保证单例。
 
 
